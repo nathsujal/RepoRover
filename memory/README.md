@@ -24,6 +24,27 @@ MemoryManager
 └── ResourceMemory (SQLite)
 ```
 
+```mermaid
+graph TD
+    subgraph The_Brain
+        A([Core Memory])
+        B([Episodic Memory])
+        C([Procedural Memory])
+        D([Resource Memory])
+        E([Knowledge Vault])
+        Semantic_Memory([Semantic Memory])
+    end
+
+    subgraph Semantic_Memory
+        direction LR
+        F1[(Neo4j GraphDB for Code)]
+        F2[(ChromaDB VectorStore for Documents)]
+    end
+
+    style Semantic_Memory fill:#1F618,stroke:#154360,stroke-width:2.5px,rx:10,ry:10
+    style The_Brain fill:#273746,stroke:#1C2833,stroke-width:2px
+```
+
 ## Installation
 
 ### Prerequisites
