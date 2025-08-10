@@ -1,0 +1,34 @@
+# Core
+python-dotenv
+PyYAML
+requests
+
+# Memory
+sqlite-utils
+neo4j
+chromadb
+
+# LLM
+sentence-transformers
+langchain
+langchain_community
+langchain_groq
+groq
+sentence-transformers
+langchain_huggingface
+huggingface
+
+# Ingestion
+tree-sitter
+langchain
+unstructured
+
+# Agents
+crewai
+
+# UI
+streamlit
+
+# Testing
+pytest
+pytest-asyncio
