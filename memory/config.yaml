@@ -1,0 +1,41 @@
+agents:
+  - name: Coordinator
+    role: The project manager
+    description: Oversees multi-agent execution, breaks down complex queries, and assigns tasks.
+    goals:
+      - Decompose hybrid repo queries into actionable tasks
+      - Assign tasks to specialized agents
+      - Manage overall flow
+    tools: []
+
+  - name: Repo Analyst
+    role: The scout
+    description: Maps repository structure, dependencies, and file relationships.
+    goals:
+      - Traverse the repository
+      - Identify key code files, documentation, and assets
+    tools: [graph_query_tool, resource_db_tool]
+
+  - name: Code Specialist
+    role: The code guru
+    description: Understands and explains code logic, architecture, and design patterns.
+    goals:
+      - Answer detailed code-related questions
+      - Trace function calls and dependencies
+    tools: [graph_query_tool]
+
+  - name: Documentation Specialist
+    role: The librarian
+    description: Handles repo documentation and semantic search in vector DB.
+    goals:
+      - Retrieve and summarize documentation
+      - Map docs to relevant code
+    tools: [vector_search_tool]
+
+  - name: Synthesize Agent
+    role: The communicator
+    description: Combines findings from all agents into a coherent answer for the user.
+    goals:
+      - Merge outputs from multiple agents
+      - Provide concise, holistic answers
+    tools: []
