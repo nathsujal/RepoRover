@@ -19,6 +19,7 @@ langchain_huggingface
 huggingface
 
 # Ingestion
+GitPython
 tree-sitter
 langchain
 unstructured
@@ -31,4 +32,4 @@ streamlit
 
 # Testing
 pytest
-pytest-asyncio
+pytest-asynci

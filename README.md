@@ -34,8 +34,8 @@ The system's memory is modeled after a cognitive architecture with six distinct 
 1. **Core Memory**: A YAML file storing the agent's persona and user profile.
 2. **Episodic Memory**: An SQLite database logging the chronological history of all actions for context and debugging.
 3. **Semantic Memory (Hybrid)**:
-   * **Neo4j Graph Database**: Stores the code as a **Knowledge Graph**. Nodes are files, classes, and functions; edges are relationships like `:CALLS`, `:IMPORTS`, and `:INHERITS_FROM`. This captures the explicit structure.
-   * **ChromaDB Vector Store**: Stores embeddings of all documentation (`.md`, `.txt`). This captures conceptual and semantic meaning.
+    * **Neo4j Graph Database**: Stores the code as a **Knowledge Graph**. Nodes are files, classes, and functions; edges are relationships like `:CALLS`, `:IMPORTS`, and `:INHERITS_FROM`. This captures the explicit structure.
+    * **ChromaDB Vector Store**: Stores embeddings of all documentation (`.md`, `.txt`). This captures conceptual and semantic meaning.
 4. **Procedural Memory**: YAML files defining step-by-step workflows for complex, multi-agent tasks (e.g., a "full security audit").
 5. **Resource Memory**: An SQLite database serving as a catalog of all files in the repository.
 6. **Knowledge Vault**: A secure store (e.g., HashiCorp Vault or `.env` file) for sensitive data like API keys.

@@ -5,27 +5,28 @@ This module provides a comprehensive memory system with multiple components:
 - CoreMemory: Static configuration and persona
 - EpisodicMemory: Conversation history and experiences
 - VectorStore: Semantic search and document retrieval
-- GraphDatabase: Knowledge graph and relationships
+- Neo4jGraphDB: Knowledge graph and relationships using Neo4j
 - ResourceMemory: File and resource tracking
 - MemoryManager: Unified interface for all memory components
 """
 
 from dataclasses import asdict
 import datetime
-from .core_memory import CoreMemory
-from .episodic_memory import EpisodicMemory, MemoryEntry
-from .vector_store import VectorStore
-from .graph_db import Neo4jGraphDatabase as GraphDatabase, Node, Relationship
-from .resource_memory import ResourceMemory, Resource
+from core_memory import CoreMemory
+from episodic_memory import EpisodicMemory, MemoryEntry
+from vector_store import VectorStore
+from graph_db import Neo4jGraphMemory
+from resource_memory import ResourceMemory, Resource
+import logging
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     'CoreMemory',
     'EpisodicMemory', 
     'MemoryEntry',
     'VectorStore',
-    'GraphDatabase',
-    'Node',
-    'Relationship',
+    'Neo4jGraphMemory',
     'ResourceMemory',
     'Resource',
     'MemoryManager'
@@ -37,23 +38,220 @@ class MemoryManager:
     Provides a high-level interface for memory operations.
     """
     
-    def __init__(self, config_path: str = "memory/config.yaml"):
+    def __init__(self, config_path: str = "memory/config.yaml", 
+                 neo4j_uri: str = "neo4j://127.0.0.1:7687",
+                 neo4j_user: str = "neo4j",
+                 neo4j_password: str = "password"):
         """
         Initialize the memory manager with all components.
         
         Args:
             config_path (str): Path to the configuration file
+            neo4j_uri (str): Neo4j database URI
+            neo4j_user (str): Neo4j username
+            neo4j_password (str): Neo4j password
         """
         # Initialize all memory components
         self.core_memory = CoreMemory(config_path)
         self.episodic_memory = EpisodicMemory()
         self.vector_store = VectorStore()
-        self.graph_db = GraphDatabase()
         self.resource_memory = ResourceMemory()
+        
+        # Initialize Neo4j Graph Memory with error handling
+        try:
+            self.graph_memory = Neo4jGraphMemory(
+                uri=neo4j_uri,
+                user=neo4j_user, 
+                password=neo4j_password
+            )
+            logger.info("Neo4j Graph Memory initialized successfully")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Neo4j Graph Memory: {e}")
+            self.graph_memory = None
         
         # Track memory usage and performance
         self._access_count = 0
         self._last_cleanup = None
+    
+    def build_repository_graph(self, repo_path: str) -> dict:
+        """
+        Build a knowledge graph from a repository.
+        
+        Args:
+            repo_path (str): Path to the repository to analyze
+            
+        Returns:
+            dict: Build status and statistics
+        """
+        if not self.graph_memory:
+            return {
+                'status': 'error',
+                'message': 'Neo4j Graph Memory not available'
+            }
+        
+        try:
+            self.graph_memory.build_repository_graph(repo_path)
+            stats = self.graph_memory.get_graph_statistics()
+            
+            return {
+                'status': 'success',
+                'message': f'Repository graph built successfully',
+                'statistics': stats
+            }
+        except Exception as e:
+            logger.error(f"Failed to build repository graph: {e}")
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+    
+    def query_code_relationships(self, query_type: str, entity_name: str) -> list:
+        """
+        Query code relationships using the graph database.
+        
+        Args:
+            query_type (str): Type of query (function_callers, function_callees, etc.)
+            entity_name (str): Name of the entity to query
+            
+        Returns:
+            list: Query results
+        """
+        if not self.graph_memory:
+            logger.warning("Neo4j Graph Memory not available for querying")
+            return []
+        
+        try:
+            return self.graph_memory.querier.find_code_relationships(query_type, entity_name)
+        except Exception as e:
+            logger.error(f"Failed to query code relationships: {e}")
+            return []
+    
+    def find_function_dependencies(self, function_name: str, max_depth: int = 3) -> list:
+        """
+        Find all functions that a given function depends on.
+        
+        Args:
+            function_name (str): Name of the function
+            max_depth (int): Maximum depth to search
+            
+        Returns:
+            list: List of dependencies
+        """
+        if not self.graph_memory:
+            return []
+        
+        try:
+            return self.graph_memory.querier.find_function_dependencies(function_name, max_depth)
+        except Exception as e:
+            logger.error(f"Failed to find function dependencies: {e}")
+            return []
+    
+    def find_circular_dependencies(self) -> list:
+        """
+        Find circular import dependencies in the codebase.
+        
+        Returns:
+            list: List of files with circular dependencies
+        """
+        if not self.graph_memory:
+            return []
+        
+        try:
+            return self.graph_memory.querier.find_circular_dependencies()
+        except Exception as e:
+            logger.error(f"Failed to find circular dependencies: {e}")
+            return []
+    
+    def find_orphaned_functions(self) -> list:
+        """
+        Find functions that are never called.
+        
+        Returns:
+            list: List of orphaned functions
+        """
+        if not self.graph_memory:
+            return []
+        
+        try:
+            return self.graph_memory.querier.find_orphaned_functions()
+        except Exception as e:
+            logger.error(f"Failed to find orphaned functions: {e}")
+            return []
+    
+    def get_file_impact_analysis(self, file_path: str, max_depth: int = 5) -> list:
+        """
+        Find all files that would be affected if this file changes.
+        
+        Args:
+            file_path (str): Path to the file
+            max_depth (int): Maximum depth to search
+            
+        Returns:
+            list: List of affected files
+        """
+        if not self.graph_memory:
+            return []
+        
+        try:
+            return self.graph_memory.querier.get_file_impact_analysis(file_path, max_depth)
+        except Exception as e:
+            logger.error(f"Failed to get file impact analysis: {e}")
+            return []
+    
+    def search_code(self, search_term: str, limit: int = 20) -> list:
+        """
+        Search for code elements related to a search term.
+        
+        Args:
+            search_term (str): Term to search for
+            limit (int): Maximum number of results
+            
+        Returns:
+            list: Search results
+        """
+        if not self.graph_memory:
+            return []
+        
+        try:
+            return self.graph_memory.querier.find_related_code(search_term, limit)
+        except Exception as e:
+            logger.error(f"Failed to search code: {e}")
+            return []
+    
+    def get_graph_statistics(self) -> dict:
+        """
+        Get comprehensive statistics about the knowledge graph.
+        
+        Returns:
+            dict: Graph statistics
+        """
+        if not self.graph_memory:
+            return {
+                'status': 'not_available',
+                'message': 'Neo4j Graph Memory not initialized'
+            }
+        
+        try:
+            return self.graph_memory.get_graph_statistics()
+        except Exception as e:
+            logger.error(f"Failed to get graph statistics: {e}")
+            return {
+                'status': 'error',
+                'message': str(e)
+            }
+    
+    def print_graph_statistics(self):
+        """
+        Print formatted graph statistics.
+        """
+        if not self.graph_memory:
+            print("Neo4j Graph Memory not available")
+            return
+        
+        try:
+            self.graph_memory.print_graph_statistics()
+        except Exception as e:
+            logger.error(f"Failed to print graph statistics: {e}")
     
     def store_conversation(self, agent_name: str, user_message: str, 
                           agent_response: str, metadata: dict = None) -> str:
@@ -97,7 +295,7 @@ class MemoryManager:
             str: Document ID or None if vector store not available
         """
         if not self.vector_store:
-            print("Warning: Cannot store document - VectorStore not available")
+            logger.warning("Cannot store document - VectorStore not available")
             return None
         
         documents = [{"text": text, "metadata": metadata or {}}]
@@ -116,51 +314,10 @@ class MemoryManager:
             list: Search results
         """
         if not self.vector_store:
-            print("Warning: Cannot search documents - VectorStore not available")
+            logger.warning("Cannot search documents - VectorStore not available")
             return []
         
         return self.vector_store.search(query, n_results=n_results)
-    
-    def create_knowledge_node(self, labels: list, properties: dict, 
-                            node_id: str = None) -> str:
-        """
-        Create a node in the knowledge graph.
-        
-        Args:
-            labels (list): Node labels
-            properties (dict): Node properties
-            node_id (str): Custom node ID
-            
-        Returns:
-            str: Node ID
-        """
-        if not self.graph_db:
-            print("Warning: Cannot create knowledge node - GraphDatabase not available")
-            return None
-        
-        return self.graph_db.create_node(labels, properties, node_id)
-    
-    def create_relationship(self, start_node_id: str, end_node_id: str,
-                          relationship_type: str, properties: dict = None) -> str:
-        """
-        Create a relationship between nodes.
-        
-        Args:
-            start_node_id (str): Start node ID
-            end_node_id (str): End node ID
-            relationship_type (str): Type of relationship
-            properties (dict): Relationship properties
-            
-        Returns:
-            str: Relationship ID
-        """
-        if not self.graph_db:
-            print("Warning: Cannot create relationship - GraphDatabase not available")
-            return None
-        
-        return self.graph_db.create_relationship(
-            start_node_id, end_node_id, relationship_type, properties
-        )
     
     def add_resource(self, path: str, resource_type: str, 
                     metadata: dict = None) -> str:
@@ -205,7 +362,7 @@ class MemoryManager:
                 return agent
         return {}
     
-    def search_memories(self, query: str, limit: int = 20) -> list:
+    def search_memories(self, query: str, limit: int = 20) -> dict:
         """
         Search across all memory types.
         
@@ -214,7 +371,7 @@ class MemoryManager:
             limit (int): Number of results to return
             
         Returns:
-            list: Combined search results
+            dict: Combined search results from all memory components
         """
         results = {
             'episodic': self.episodic_memory.search_memories(query, limit),
@@ -227,10 +384,10 @@ class MemoryManager:
         else:
             results['documents'] = []
         
-        if self.graph_db:
-            results['knowledge'] = self.graph_db.search_nodes(properties={'name': query}, limit=limit)
+        if self.graph_memory:
+            results['code'] = self.search_code(query, limit)
         else:
-            results['knowledge'] = []
+            results['code'] = []
         
         return results
     
@@ -257,10 +414,10 @@ class MemoryManager:
         else:
             stats['vector_store'] = {'status': 'not_available'}
         
-        if self.graph_db:
-            stats['graph_database'] = self.graph_db.get_graph_stats()
+        if self.graph_memory:
+            stats['graph_memory'] = self.get_graph_statistics()
         else:
-            stats['graph_database'] = {'status': 'not_available'}
+            stats['graph_memory'] = {'status': 'not_available'}
         
         return stats
     
@@ -363,31 +520,48 @@ class MemoryManager:
         # Get popular resources
         popular_resources = self.resource_memory.get_popular_resources(10)
         
-        return {
+        context = {
             'agent_config': agent_config,
             'recent_memories': [asdict(memory) for memory in recent_memories],
             'recent_conversations': recent_conversations,
             'popular_resources': [asdict(resource) for resource in popular_resources],
             'memory_stats': self.get_memory_stats()
         }
+        
+        # Add graph statistics if available
+        if self.graph_memory:
+            context['graph_stats'] = self.get_graph_statistics()
+        
+        return context
     
     def close(self):
         """Close all memory connections."""
-        if self.graph_db and hasattr(self.graph_db, 'close'):
-            self.graph_db.close()
+        if self.graph_memory and hasattr(self.graph_memory, 'close'):
+            self.graph_memory.close()
 
 # Convenience function to create a memory manager instance
-def create_memory_manager(config_path: str = "memory/config.yaml") -> MemoryManager:
+def create_memory_manager(config_path: str = "memory/config.yaml",
+                         neo4j_uri: str = "neo4j://127.0.0.1:7687",
+                         neo4j_user: str = "neo4j", 
+                         neo4j_password: str = "password") -> MemoryManager:
     """
     Create and return a memory manager instance.
     
     Args:
         config_path (str): Path to the configuration file
+        neo4j_uri (str): Neo4j database URI
+        neo4j_user (str): Neo4j username  
+        neo4j_password (str): Neo4j password
         
     Returns:
         MemoryManager: Configured memory manager instance
     """
-    return MemoryManager(config_path)
+    return MemoryManager(
+        config_path=config_path,
+        neo4j_uri=neo4j_uri,
+        neo4j_user=neo4j_user,
+        neo4j_password=neo4j_password
+    )
 
 # Example usage
 if __name__ == "__main__":
@@ -395,6 +569,11 @@ if __name__ == "__main__":
     
     # Create memory manager
     memory_manager = create_memory_manager()
+    
+    # Build repository graph
+    repo_path = "/home/sujalnath/dev/projects/RepoRover"
+    build_result = memory_manager.build_repository_graph(repo_path)
+    print(f"Repository graph build result: {build_result}")
     
     # Store some example data
     memory_manager.store_conversation(
@@ -420,11 +599,22 @@ if __name__ == "__main__":
         metadata={"language": "python", "purpose": "example"}
     )
     
+    # Search for code
+    code_results = memory_manager.search_code("function", limit=5)
+    print(f"Found {len(code_results)} code-related results")
+    
+    # Find function dependencies
+    dependencies = memory_manager.find_function_dependencies("main")
+    print(f"Found {len(dependencies)} dependencies for 'main' function")
+    
     # Get memory stats
     stats = memory_manager.get_memory_stats()
     print("Memory Statistics:")
     for component, data in stats.items():
         print(f"  {component}: {data}")
+    
+    # Print graph statistics
+    memory_manager.print_graph_statistics()
     
     # Get agent context
     context = memory_manager.get_agent_context("Coordinator")
