@@ -21,9 +21,7 @@ wheels/
 *.egg
 
 # Virtual Environment
-venv/
-env/
-ENV/
+.venv/
 
 # IDE
 .idea/
@@ -34,8 +32,6 @@ ENV/
 
 # Environment variables
 .env
-.env.local
-.env.*.local
 
 # Local development
 .DS_Store
@@ -51,3 +47,7 @@ data/repositories/*
 !data/repositories/.gitkeep
 data/knowledge/*
 !data/knowledge/.gitkeep
+
+# Tests
+tests/
+test*.py
