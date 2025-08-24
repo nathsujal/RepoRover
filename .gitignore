@@ -41,12 +41,10 @@ Thumbs.db
 *.log
 *.sql
 *.sqlite
+*.db
 
 # Project specific
-data/repositories/*
-!data/repositories/.gitkeep
-data/knowledge/*
-!data/knowledge/.gitkeep
+data/
 
 # Tests
 tests/
