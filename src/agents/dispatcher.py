@@ -3,53 +3,58 @@ Dispatcher Agent: Manages the ingestion workflow for a repository.
 """
 import logging
 from typing import Any, Dict, Type, List
+from pathlib import Path
 
-from .base import AgentConfig, BaseAgent
+from pydantic import BaseModel
+
 from .architect import ArchitectAgent
 from .librarian import LibrarianAgent
 from .annotator import AnnotatorAgent
+from .query_planner.agent import QueryPlannerAgent
 
 from src.tools.repo_cloner import clone_repo, scan_repository
 
 from src.memory.semantic_memory.manager import SemanticMemoryManager
+from src.memory.core_memory import CoreMemory
+from src.memory.episodic_memory.manager import EpisodicMemoryManager
+from src.memory.procedural_memory.manager import ProceduralMemoryManager
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-class DispatcherConfig(AgentConfig):
+class DispatcherConfig(BaseModel):
     """Configuration for the Dispatcher agent."""
     model_name: str = "N/A"
     model_class: Type = None
+    agent_name: str = "dispatcher"
+    description: str = "Routes requests and orchestrates the ingestion pipeline."
 
-class DispatcherAgent(BaseAgent):
+class DispatcherAgent():
     """
     The Dispatcher agent orchestrates the entire repository ingestion process.
     """
 
     def __init__(self, semantic_memory: SemanticMemoryManager):
-        config = DispatcherConfig(
-            agent_name="dispatcher",
-            description="Routes requests and orchestrates the ingestion pipeline."
-        )
-        # We manually initialize to avoid loading an LLM for the dispatcher itself
-        self.config = config
-        self.name = config.agent_name
-        self.description = config.description
+        self.config = DispatcherConfig()
+        self.name = self.config.agent_name
+        self.description = self.config.description
         self.model = None
 
         # The dispatcher holds the central memory and specialist agents
         self.semantic_memory = semantic_memory
-        self.architect = ArchitectAgent(self.semantic_memory)
-        self.librarian = LibrarianAgent(self.semantic_memory)
-        self.annotator = AnnotatorAgent(self.semantic_memory)
-        # self.query_planner = QueryPlannerAgent(self.semantic_memory)
+        core_memory_path = Path(settings.MEMORY_DIR) / "core_memory.json"
+        self.core_memory = CoreMemory(file_path=core_memory_path)
+        self.episodic_memory = EpisodicMemoryManager()
+        self.procedural_memory = ProceduralMemoryManager(workflow_dir="workflows")
+
+        self.agents: Dict[str, Any] = {
+            "architect": ArchitectAgent(self.semantic_memory, self.core_memory, self.episodic_memory),
+            "librarian": LibrarianAgent(self.semantic_memory, self.core_memory, self.episodic_memory),
+            "annotator": AnnotatorAgent(self.semantic_memory, self.core_memory, self.episodic_memory),
+            "query_planner": QueryPlannerAgent(self.semantic_memory),
+        }
 
         logger.info(f"{self.name} agent initialized.")
-
-    @classmethod
-    def get_config_class(cls) -> Type[AgentConfig]:
-        """Get the configuration class for this agent."""
-        return DispatcherConfig
 
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -60,9 +65,18 @@ class DispatcherAgent(BaseAgent):
                         or a 'question' for querying.
         """
         if "github_url" in input_data:
+            self.episodic_memory.add_interaction(
+                agent_name=self.name,
+                interaction_type="user_request",
+                content=f"Received request to ingest repository: {input_data['github_url']}"
+            )
             return await self._handle_ingestion(input_data)
         elif "question" in input_data:
-            # This will be implemented in the query phase
+            self.episodic_memory.add_interaction(
+                agent_name=self.name,
+                interaction_type="user_request",
+                content=f"Received query: {input_data['question']}"
+            )
             return await self._handle_query(input_data)
         else:
             return {"status": "error", "message": "Invalid input. Must provide 'github_url' or 'question'."}
@@ -71,6 +85,12 @@ class DispatcherAgent(BaseAgent):
         """Handles the entire ingestion pipeline for a repository."""
         repo_url = input_data.get("github_url")
         logger.info(f"Starting ingestion process for {repo_url}")
+        self.episodic_memory.add_interaction(
+            agent_name=self.name,
+            interaction_type="internal_thought",
+            content=f"Starting ingestion pipeline for {repo_url}.",
+            interaction_metadata={"repo_url": repo_url}
+        )
 
         try:
             logger.info("Clearing all memory stores for a fresh ingestion...")
@@ -81,6 +101,12 @@ class DispatcherAgent(BaseAgent):
 
             # --- 1. Clone the Repository ---
             clone_repo(repo_url, local_repo_path)
+            self.episodic_memory.add_interaction(
+                agent_name=self.name,
+                interaction_type="internal_action",
+                content=f"Successfully cloned repository {repo_name} to {local_repo_path}.",
+                interaction_metadata={"repo_name": repo_name, "path": local_repo_path}
+            )
 
             # --- 2. Scan and Categorize Files ---
             categorized_files = scan_repository(local_repo_path)
@@ -88,18 +114,20 @@ class DispatcherAgent(BaseAgent):
             doc_files = categorized_files.get("markdown", [])
             
             logger.info(f"Scan complete: Found {len(python_files)} Python files and {len(doc_files)} docs.")
+            self.episodic_memory.add_interaction(
+                agent_name=self.name,
+                interaction_type="internal_action",
+                content=f"Scanned repository and found {len(python_files)} Python files and {len(doc_files)} documentation files.",
+                interaction_metadata={"python_files_count": len(python_files), "doc_files_count": len(doc_files)}
+            )
 
-            # --- 3. Orchestrate Specialist Agents ---
-            if python_files:
-                await self.architect.execute({"file_paths": python_files})
-            
-            if doc_files:
-                await self.librarian.execute({"doc_file_paths": doc_files})
-
-            logger.info("Dispatcher: Handing off to Annotator Agent for code summarization...")
-            
-            # --- 4. Annotate Code Entities ---
-            await self.annotator.execute({})
+            # --- 3. Execute Ingestion Workflow ---
+            initial_context = {
+                "python_files": python_files,
+                "doc_files": doc_files,
+                "repo_name": repo_name
+            }
+            await self._execute_workflow("ingestion_workflow", initial_context)
 
             return {
                 "status": "success",
@@ -110,8 +138,60 @@ class DispatcherAgent(BaseAgent):
             logger.exception(f"An error occurred during ingestion for {repo_url}")
             return {"status": "error", "message": str(e)}
 
+    async def _execute_workflow(self, workflow_name: str, initial_context: Dict[str, Any]):
+        """Executes a workflow from the procedural memory."""
+        workflow = self.procedural_memory.get_workflow(workflow_name)
+        if not workflow:
+            raise ValueError(f"Workflow '{workflow_name}' not found.")
+
+        logger.info(f"Executing workflow: {workflow.name}")
+        self.episodic_memory.add_interaction(
+            agent_name=self.name,
+            interaction_type="internal_action",
+            content=f"Starting workflow '{workflow.name}'.",
+            interaction_metadata={"workflow_name": workflow.name}
+        )
+
+        context = initial_context.copy()
+
+        for step in workflow.steps:
+            agent = self.agents.get(step.agent)
+            if not agent:
+                logger.error(f"Agent '{step.agent}' not found for step '{step.name}'.")
+                continue
+
+            # Prepare input for the agent by replacing placeholders
+            step_input = {}
+            for key, value in step.input.items():
+                if isinstance(value, str) and value.startswith("{{") and value.endswith("}}"):
+                    placeholder = value[2:-2]
+                    step_input[key] = context.get(placeholder)
+                else:
+                    step_input[key] = value
+            
+            logger.info(f"Executing step '{step.name}' with agent '{step.agent}'.")
+            self.episodic_memory.add_interaction(
+                agent_name=self.name,
+                interaction_type="internal_action",
+                content=f"Executing workflow step '{step.name}' with agent '{step.agent}'.",
+                interaction_metadata={"step": step.name, "agent": step.agent, "input": step_input}
+            )
+
+            # Execute the agent and capture the output
+            result = await agent.execute(step_input)
+
+            # Update context with the result of the step
+            if result:
+                context[f"{step.name}_output"] = result
+
     async def _handle_query(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """(Placeholder) Handles the query pipeline."""
+        """Handles the query pipeline by executing the query workflow."""
         logger.info("Query received. Routing to query pipeline...")
-        # In the future, this will call the Query Planner agent.
-        return {"status": "pending", "message": "Query handling not yet implemented."}
+        try:
+            initial_context = {"question": input_data.get("question")}
+            # The result of the workflow execution will be the final context
+            result = await self._execute_workflow("query_workflow", initial_context)
+            return {"status": "success", "result": result}
+        except Exception as e:
+            logger.exception("An error occurred during the query process.")
+            return {"status": "error", "message": str(e)}

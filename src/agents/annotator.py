@@ -8,23 +8,22 @@ from concurrent.futures import ThreadPoolExecutor
 import gc
 import torch
 
-from .base import AgentConfig, BaseAgent
-from src.models.groqModel import GroqModel
+from pydantic import BaseModel
+
 from src.models.geminiModel import GeminiModel
-from src.models.codellama import CodeLlamaModel
 from src.memory.semantic_memory.manager import SemanticMemoryManager
+from src.memory.core_memory import CoreMemory
+from src.memory.episodic_memory.manager import EpisodicMemoryManager
 
 logger = logging.getLogger(__name__)
 
-class AnnotatorConfig(AgentConfig):
+class AnnotatorConfig(BaseModel):
     """Configuration for the Annotator agent."""
-    model_name: str = "llama-3.1-8b-instant"
+    agent_name: str = "annotator"
+    description: str = "Generates summaries for code blocks and adds embeddings."
+    model_name: str = "gemma-3-4b-it"
     model_class: Type = GeminiModel
-    temperature: float = 0.2
-    max_new_tokens: int = 128
-    load_in_4bit: bool = True
     batch_size: int = 3
-    sequential_processing: bool = True
     memory_cleanup_interval: int = 5
 
 class AnnotatorAgent():
@@ -33,19 +32,15 @@ class AnnotatorAgent():
     Optimized for resource-constrained environments like Mac Mini.
     """
 
-    def __init__(self, semantic_memory: SemanticMemoryManager):
-        self.config = AnnotatorConfig(
-            agent_name="annotator",
-            description="Generates summaries for code blocks and adds embeddings."
-        )
+    def __init__(self, semantic_memory: SemanticMemoryManager, core_memory: CoreMemory, episodic_memory: EpisodicMemoryManager):
+        self.config = AnnotatorConfig()
+        self.name = self.config.agent_name
+        self.description = self.config.description
         self.model = GeminiModel()
         self.semantic_memory = semantic_memory
+        self.core_memory = core_memory
+        self.episodic_memory = episodic_memory
         self._thread_executor = ThreadPoolExecutor(max_workers=1)  # Single thread for Mac
-
-    @classmethod
-    def get_config_class(cls) -> Type[AgentConfig]:
-        """Get the configuration class for this agent."""
-        return AnnotatorConfig
 
     def _create_summary_prompt(self, code_snippet: str, entity_name: str = "") -> str:
         """Create a prompt for code summarization."""
@@ -182,6 +177,12 @@ class AnnotatorAgent():
         Executes the code annotation process with Mac Mini optimizations.
         """
         logger.info("Annotator Agent: Starting code annotation process (Mac Mini optimized)")
+        self.episodic_memory.add_interaction(
+            agent_name=self.name,
+            interaction_type="internal_thought",
+            content="Starting code annotation process.",
+            interaction_metadata={}
+        )
         
         try:
             # Verify model is loaded
@@ -202,6 +203,12 @@ class AnnotatorAgent():
                 }
 
             logger.info(f"Found {len(function_entities)} functions to annotate")
+            self.episodic_memory.add_interaction(
+                agent_name=self.name,
+                interaction_type="internal_thought",
+                content=f"Found {len(function_entities)} functions to annotate.",
+                interaction_metadata={"function_count": len(function_entities)}
+            )
             
             total_successful = 0
             total_entities = len(function_entities)
@@ -255,6 +262,17 @@ class AnnotatorAgent():
             success_rate = (total_successful / total_entities) * 100 if total_entities > 0 else 0
             
             logger.info(f"Annotation process complete: {total_successful}/{total_entities} functions ({success_rate:.1f}% success rate)")
+            
+            self.episodic_memory.add_interaction(
+                agent_name=self.name,
+                interaction_type="internal_action",
+                content=f"Annotation process complete. Successfully annotated {total_successful}/{total_entities} functions.",
+                interaction_metadata={
+                    "total_functions": total_entities,
+                    "successful_annotations": total_successful,
+                    "success_rate": success_rate
+                }
+            )
             
             return {
                 "status": "success",

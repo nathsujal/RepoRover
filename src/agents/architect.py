@@ -4,9 +4,12 @@ Architect Agent: Parses source code to build a structural map of the repository.
 import logging
 from typing import Any, Dict, List, Type
 
-from .base import AgentConfig, BaseAgent
+from pydantic import BaseModel
+
 from src.tools.code_parser import parse_python_file, CodeVisitor
 from src.memory.semantic_memory.manager import SemanticMemoryManager
+from src.memory.core_memory import CoreMemory
+from src.memory.episodic_memory.manager import EpisodicMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +29,20 @@ def _sanitize_metadata(properties: Dict[str, Any]) -> Dict[str, Any]:
 
 async def run_architect_agent(
     file_paths: List[str],
-    semantic_memory: SemanticMemoryManager
+    semantic_memory: SemanticMemoryManager,
+    episodic_memory: EpisodicMemoryManager,
+    agent_name: str
 ):
     """
     Orchestrates the analysis of source code files to populate the semantic memory.
     """
     logger.info(f"Architect Agent: Starting analysis on {len(file_paths)} files.")
+    episodic_memory.add_interaction(
+        agent_name=agent_name,
+        interaction_type="internal_thought",
+        content=f"Starting analysis of {len(file_paths)} source code files.",
+        interaction_metadata={"file_count": len(file_paths)}
+    )
 
     all_visitors: List[CodeVisitor] = []
     file_nodes: Dict[str, str] = {}
@@ -125,6 +136,12 @@ async def run_architect_agent(
             )
 
     logger.info(f"Architect Agent: Created entities from {len(all_visitors)} files.")
+    episodic_memory.add_interaction(
+        agent_name=agent_name,
+        interaction_type="internal_action",
+        content=f"Finished pass 1: Created all code entities from {len(all_visitors)} files.",
+        interaction_metadata={"files_processed": len(all_visitors)}
+    )
 
     # --- PASS 2: Create Relationships Between Entities (Edges) ---
     logger.info("Architect Agent: Creating relationships between entities.")
@@ -179,37 +196,44 @@ async def run_architect_agent(
             relationships_created += 1
 
     logger.info(f"Architect Agent: Created {relationships_created} relationships.")
+    episodic_memory.add_interaction(
+        agent_name=agent_name,
+        interaction_type="internal_action",
+        content=f"Finished pass 2: Created {relationships_created} relationships between entities.",
+        interaction_metadata={"relationships_created": relationships_created}
+    )
     logger.info("Architect Agent: Analysis complete.")
 
 
 # --- Agent Class Wrapper ---
 
-class ArchitectConfig(AgentConfig):
+class ArchitectConfig(BaseModel):
     """Configuration for the Architect agent."""
+    agent_name: str = "architect"
+    description: str = "Parses source code and builds the structural knowledge graph."
     model_name: str = "N/A"
     model_class: Type = None
     temperature: float = 0.0
 
-class ArchitectAgent(BaseAgent):
+class ArchitectAgent():
     """
     The Architect agent is a wrapper for the core logic that parses code
     and populates the Semantic Memory.
     """
 
-    def __init__(self, semantic_memory: SemanticMemoryManager):
-        config = ArchitectConfig(
-            agent_name="architect",
-            description="Parses source code and builds the structural knowledge graph."
-        )
+    def __init__(self, semantic_memory: SemanticMemoryManager, core_memory: CoreMemory, episodic_memory: EpisodicMemoryManager):
+        config = ArchitectConfig()
         self.config = config
         self.name = config.agent_name
         self.description = config.description
         self.semantic_memory = semantic_memory
-        self.model = None # Explicitly setting model to None
+        self.core_memory = core_memory
+        self.episodic_memory = episodic_memory
+        self.model = None  # Explicitly setting model to None
         logger.info(f"{self.name} agent initialized without an LLM.")
 
     @classmethod
-    def get_config_class(cls) -> Type[AgentConfig]:
+    def get_config_class(cls):
         """Get the configuration class for this agent."""
         return ArchitectConfig
 
@@ -224,7 +248,9 @@ class ArchitectAgent(BaseAgent):
         try:
             await run_architect_agent(
                 file_paths=file_paths,
-                semantic_memory=self.semantic_memory
+                semantic_memory=self.semantic_memory,
+                episodic_memory=self.episodic_memory,
+                agent_name=self.name
             )
             
             # Verify entities were created and log some statistics

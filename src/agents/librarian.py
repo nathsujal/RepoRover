@@ -4,16 +4,20 @@ Librarian Agent: Processes documentation files and populates semantic memory.
 import logging
 from typing import List, Type, Dict, Any
 
-from .base import AgentConfig, BaseAgent
+from pydantic import BaseModel
 
 from src.memory.semantic_memory.manager import SemanticMemoryManager
+from src.memory.core_memory import CoreMemory
+from src.memory.episodic_memory.manager import EpisodicMemoryManager
 from src.tools.text_chunker import chunk_text
 
 logger = logging.getLogger(__name__)
 
 async def run_librarian_agent(
     doc_file_paths: List[str],
-    semantic_memory: SemanticMemoryManager
+    semantic_memory: SemanticMemoryManager,
+    episodic_memory: EpisodicMemoryManager,
+    agent_name: str
 ):
     """
     Orchestrates the processing of documentation files.
@@ -23,6 +27,12 @@ async def run_librarian_agent(
         semantic_memory: An instance of the SemanticMemoryManager.
     """
     logger.info(f"Librarian Agent: Starting analysis on {len(doc_file_paths)} doc files.")
+    episodic_memory.add_interaction(
+        agent_name=agent_name,
+        interaction_type="internal_thought",
+        content=f"Starting analysis of {len(doc_file_paths)} documentation files.",
+        interaction_metadata={"file_count": len(doc_file_paths)}
+    )
 
     all_chunks = []
     chunk_metadatas = []
@@ -91,6 +101,12 @@ async def run_librarian_agent(
         }
 
     logger.info(f"Created {len(all_chunks)} chunks from {total_chars_processed} characters across {len(doc_file_paths)} files")
+    episodic_memory.add_interaction(
+        agent_name=agent_name,
+        interaction_type="internal_action",
+        content=f"Read and chunked {len(doc_file_paths)} files, creating {len(all_chunks)} chunks.",
+        interaction_metadata={"files_processed": len(doc_file_paths), "chunks_created": len(all_chunks)}
+    )
 
     # --- 2. Generate Embeddings in a Batch ---
     try:
@@ -140,6 +156,12 @@ async def run_librarian_agent(
             logger.error(f"Failed to add entity for chunk {i}: {e}")
     
     logger.info(f"Librarian Agent: Successfully created {successful_entities}/{len(all_chunks)} document entities")
+    episodic_memory.add_interaction(
+        agent_name=agent_name,
+        interaction_type="internal_action",
+        content=f"Populated semantic memory with {successful_entities} document chunk entities.",
+        interaction_metadata={"entities_created": successful_entities}
+    )
     
     return {
         "status": "success",
@@ -150,29 +172,30 @@ async def run_librarian_agent(
         "total_characters": total_chars_processed
     }
 
-class LibrarianConfig(AgentConfig):
+class LibrarianConfig(BaseModel):
     """Configuration for the Librarian agent."""
+    agent_name: str = "librarian"
+    description: str = "Processes documentation files and populates semantic memory."
     model_name: str = "N/A"
     model_class: Type = None
 
-class LibrarianAgent(BaseAgent):
+class LibrarianAgent():
     """
     The Librarian agent is a wrapper for the core logic that processes documentation files.
     """
-    def __init__(self, semantic_memory: SemanticMemoryManager):
-        config = LibrarianConfig(
-            agent_name="librarian",
-            description="Processes documentation files and populates semantic memory."
-        )
+    def __init__(self, semantic_memory: SemanticMemoryManager, core_memory: CoreMemory, episodic_memory: EpisodicMemoryManager):
+        config = LibrarianConfig()
         self.config = config
         self.name = config.agent_name
         self.description = config.description
         self.semantic_memory = semantic_memory
+        self.core_memory = core_memory
+        self.episodic_memory = episodic_memory
         self.model = None
         logger.info(f"{self.name} agent initialized without an LLM.")
 
     @classmethod
-    def get_config_class(cls) -> Type[AgentConfig]:
+    def get_config_class(cls):
         """Get the configuration class for this agent."""
         return LibrarianConfig
 
@@ -187,7 +210,9 @@ class LibrarianAgent(BaseAgent):
         try:
             result = await run_librarian_agent(
                 doc_file_paths=doc_file_paths,
-                semantic_memory=self.semantic_memory
+                semantic_memory=self.semantic_memory,
+                episodic_memory=self.episodic_memory,
+                agent_name=self.name
             )
             
             if isinstance(result, dict):
