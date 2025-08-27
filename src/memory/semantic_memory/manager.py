@@ -86,7 +86,7 @@ class SemanticMemoryManager:
         self.graph_db.create_relationship(rel)
         logger.debug(f"Added relationship: ({source_id})-[{relationship_type}]->({target_id})")
 
-    def hybrid_search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
+    async def hybrid_search(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
         """
         Performs a hybrid search, enriching semantic results with structural context.
 
@@ -100,7 +100,7 @@ class SemanticMemoryManager:
         logger.info(f"Performing hybrid search for query: '{query}'")
         
         # 1. Semantic Search: Find initial candidates from the vector store
-        semantic_results = self.vector_store.similarity_search(query=query, k=k)
+        semantic_results = await self.vector_store.similarity_search(query=query, k=k)
         if not semantic_results:
             logger.warning("Semantic search returned no results.")
             return []
