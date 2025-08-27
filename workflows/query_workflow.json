@@ -1,0 +1,14 @@
+{
+    "name": "query_workflow",
+    "description": "A workflow to handle user questions about a repository.",
+    "steps": [
+        {
+            "name": "query_planner_step",
+            "agent": "query_planner",
+            "input": {
+                "question": "{{question}}"
+            },
+            "description": "Run the query planner agent to answer the user's question."
+        }
+    ]
+}

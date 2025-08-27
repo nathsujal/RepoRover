@@ -1,0 +1,29 @@
+{
+    "name": "ingestion_workflow",
+    "description": "A workflow to ingest a repository, process its structure, documentation, and generate summaries.",
+    "initial_context": {},
+    "steps": [
+        {
+            "name": "architect_step",
+            "agent": "architect",
+            "input": {
+                "file_paths": "{{python_files}}"
+            },
+            "description": "Run the architect agent on all python files."
+        },
+        {
+            "name": "librarian_step",
+            "agent": "librarian",
+            "input": {
+                "doc_file_paths": "{{doc_files}}"
+            },
+            "description": "Run the librarian agent on all documentation files."
+        },
+        {
+            "name": "annotator_step",
+            "agent": "annotator",
+            "input": {},
+            "description": "Run the annotator agent to summarize all code entities."
+        }
+    ]
+}
