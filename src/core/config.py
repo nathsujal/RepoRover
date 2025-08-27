@@ -8,6 +8,8 @@ from typing import Dict, List, Optional, Union
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from dotenv import load_dotenv
+load_dotenv()
 
 class Settings(BaseSettings):
     """Application settings using pydantic-settings."""
@@ -23,6 +25,7 @@ class Settings(BaseSettings):
     DATA_DIR: Path = Field(default_factory=lambda: Path(__file__).parent.parent.parent / "data")
     REPOSITORIES_DIR: Path = Field(default_factory=lambda: Path(__file__).parent.parent.parent / "data" / "repositories")
     KNOWLEDGE_DIR: Path = Field(default_factory=lambda: Path(__file__).parent.parent.parent / "data" / "knowledge")
+    MEMORY_DIR: Path = Field(default_factory=lambda: Path(__file__).parent.parent.parent / "data" / "memory")
     
     # API settings
     API_PREFIX: str = "/api/v1"
@@ -38,6 +41,7 @@ class Settings(BaseSettings):
     
     # Memory settings
     VECTOR_STORE_PATH: Path = Field(default_factory=lambda: Path(__file__).parent.parent.parent / "data" / "vector_store")
+    EPISODIC_MEMORY_DB_URL: str = Field(default_factory=lambda: f"sqlite:///{(Path(__file__).parent.parent.parent / 'data' / 'memory' / 'episodic_memory.db').absolute()}")
     
     # Agent settings
     DEFAULT_AGENT_TIMEOUT: int = 300  # 5 minutes
@@ -46,12 +50,19 @@ class Settings(BaseSettings):
     # Rate limiting
     RATE_LIMIT: str = "100/minute"
     
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=True,
-        extra="ignore"
-    )
+    # Gemini API Configuration
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = "gemini-1.5-flash"
+    
+    # Query Planner Configuration
+    QUERY_MAX_CONTEXT_LENGTH: int = 8000
+    QUERY_MAX_PLAN_STEPS: int = 10
+    QUERY_DEFAULT_SEARCH_LIMIT: int = 10
+    
+    # DSPy Configuration
+    DSPY_CACHE_DIR: Path = Path("./cache/dspy")
+    DSPY_LOG_LEVEL: str = "INFO"
+
     
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
@@ -70,3 +81,4 @@ settings = Settings()
 os.makedirs(settings.REPOSITORIES_DIR, exist_ok=True)
 os.makedirs(settings.KNOWLEDGE_DIR, exist_ok=True)
 os.makedirs(settings.VECTOR_STORE_PATH, exist_ok=True)
+os.makedirs(settings.MEMORY_DIR, exist_ok=True)
