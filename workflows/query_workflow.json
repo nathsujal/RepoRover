@@ -8,7 +8,27 @@
             "input": {
                 "question": "{{question}}"
             },
-            "description": "Run the query planner agent to answer the user's question."
+            "output": "planned_query",
+            "description": "Generate a plan to answer the user's question."
+        },
+        {
+            "name": "information_retriever_step",
+            "agent": "information_retriever",
+            "input": {
+                "plan": "{{planned_query.plan}}"
+            },
+            "output": "retrieved_data",
+            "description": "Execute the plan and gather information from memory."
+        },
+        {
+            "name": "synthesizer_step",
+            "agent": "synthesizer",
+            "input": {
+                "question": "{{question}}",
+                "plan": "{{retrieved_data.collected_data}}"
+            },
+            "output": "final_response",
+            "description": "Synthesize the final response from the collected data."
         }
     ]
 }
