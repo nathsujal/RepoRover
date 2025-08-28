@@ -10,7 +10,9 @@ from pydantic import BaseModel
 from .architect import ArchitectAgent
 from .librarian import LibrarianAgent
 from .annotator import AnnotatorAgent
-from .query_planner.agent import QueryPlannerAgent
+from .query_planner import QueryPlannerAgent
+from .information_retriever import InformationRetrieverAgent
+from .synthesizer import SynthesizerAgent
 
 from src.tools.repo_cloner import clone_repo, scan_repository
 
@@ -52,6 +54,8 @@ class DispatcherAgent():
             "librarian": LibrarianAgent(self.semantic_memory, self.core_memory, self.episodic_memory),
             "annotator": AnnotatorAgent(self.semantic_memory, self.core_memory, self.episodic_memory),
             "query_planner": QueryPlannerAgent(self.semantic_memory),
+            "information_retriever": InformationRetrieverAgent(self.semantic_memory),
+            "synthesizer": SynthesizerAgent(),
         }
 
         logger.info(f"{self.name} agent initialized.")
@@ -162,27 +166,33 @@ class DispatcherAgent():
 
             # Prepare input for the agent by replacing placeholders
             step_input = {}
-            for key, value in step.input.items():
-                if isinstance(value, str) and value.startswith("{{") and value.endswith("}}"):
-                    placeholder = value[2:-2]
-                    step_input[key] = context.get(placeholder)
-                else:
-                    step_input[key] = value
+            if step.input:
+                for key, value in step.input.items():
+                    if isinstance(value, str) and value.startswith("{{") and value.endswith("}}"):
+                        placeholder = value[2:-2]
+                        
+                        keys = placeholder.split('.')
+                        resolved_value = context
+                        try:
+                            for k in keys:
+                                resolved_value = resolved_value[k]
+                            step_input[key] = resolved_value
+                        except (KeyError, TypeError) as e:
+                            logger.error(f"Could not resolve placeholder '{placeholder}': {e}")
+                            step_input[key] = None
+                    else:
+                        step_input[key] = value
             
             logger.info(f"Executing step '{step.name}' with agent '{step.agent}'.")
-            self.episodic_memory.add_interaction(
-                agent_name=self.name,
-                interaction_type="internal_action",
-                content=f"Executing workflow step '{step.name}' with agent '{step.agent}'.",
-                interaction_metadata={"step": step.name, "agent": step.agent, "input": step_input}
-            )
-
+            
             # Execute the agent and capture the output
             result = await agent.execute(step_input)
 
             # Update context with the result of the step
-            if result:
-                context[f"{step.name}_output"] = result
+            if step.output:
+                context[step.output] = result
+
+        return context
 
     async def _handle_query(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Handles the query pipeline by executing the query workflow."""
