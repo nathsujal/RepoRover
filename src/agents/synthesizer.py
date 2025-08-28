@@ -1,6 +1,8 @@
-# src/agents/synthesizer.py
+"""
+Synthesizer Agent: Generates a final, human-readable response from the collected data of a query plan.
+"""
+
 import logging
-import json
 from typing import Any, Dict, List
 
 from src.models.geminiModel import GeminiModel

@@ -1,3 +1,7 @@
+"""
+Query Planner Agent: Breaks down user questions into an executable plan of tool calls.
+"""
+
 import logging
 import json
 from typing import Any, Dict, List
@@ -6,7 +10,6 @@ from langchain.agents import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
-from langchain_core.messages import AIMessage
 from langchain_core.tools import BaseTool
 
 from src.tools import (

@@ -1,5 +1,4 @@
 """Configuration for VectorStore using ChromaDB."""
-from typing import Optional, List, Dict, Any
 from pydantic import Field
 
 from src.core.config import Settings

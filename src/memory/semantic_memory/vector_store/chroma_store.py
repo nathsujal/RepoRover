@@ -4,7 +4,6 @@ from typing import Any, Dict, List, Optional, cast
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
-from chromadb.utils import embedding_functions
 from chromadb.api.types import (
     EmbeddingFunction,
     Documents,

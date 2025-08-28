@@ -4,39 +4,39 @@ We're excited that you're interested in contributing to RepoRover! Before you be
 
 ## 🛠️ Development Setup
 
-1. **Fork and Clone**
-   - Fork the repository on GitHub
-   - Clone your forked repository locally
-   ```bash
-   git clone https://github.com/your-username/RepoRover.git
-   cd RepoRover
-   ```
+1.  **Fork and Clone**
+    -   Fork the repository on GitHub.
+    -   Clone your forked repository locally:
+        ```bash
+        git clone [https://github.com/your-username/RepoRover.git](https://github.com/your-username/RepoRover.git)
+        cd RepoRover
+        ```
 
-2. **Set up the development environment**
-   - Install Poetry if you haven't already:
-     ```bash
-     curl -sSL https://install.python-poetry.org | python3 -
-     ```
-   - Install dependencies:
-     ```bash
-     poetry install
-     ```
-   - Set up pre-commit hooks:
-     ```bash
-     poetry run pre-commit install
-     ```
+2.  **Set up the development environment**
 
-3. **Create a feature branch**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+    **Option A: Using `venv` (Recommended)**
+    ```bash
+    # Create and activate the virtual environment
+    python3 -m venv venv
+    source venv/bin/activate  # On Windows, use `.\venv\Scripts\activate`
 
-## 🧪 Running Tests
+    # Install dependencies
+    pip install -r requirements.txt
+    ```
 
-Run the test suite with:
-```bash
-poetry run pytest
-```
+    **Option B: Using Poetry**
+    ```bash
+    # Install dependencies
+    poetry install
+
+    # Set up pre-commit hooks
+    poetry run pre-commit install
+    ```
+
+3.  **Create a feature branch**
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
 
 ## 📝 Code Style
 
