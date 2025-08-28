@@ -44,8 +44,8 @@ class DispatcherAgent():
 
         # The dispatcher holds the central memory and specialist agents
         self.semantic_memory = semantic_memory
-        core_memory_path = Path(settings.MEMORY_DIR) / "core_memory.json"
-        self.core_memory = CoreMemory(file_path=core_memory_path)
+        # core_memory_path = Path(settings.MEMORY_DIR) / "core_memory.json"
+        self.core_memory = CoreMemory(file_path=Path("data/memory/core_memory.json"))
         self.episodic_memory = EpisodicMemoryManager()
         self.procedural_memory = ProceduralMemoryManager(workflow_dir="workflows")
 
@@ -198,7 +198,20 @@ class DispatcherAgent():
         """Handles the query pipeline by executing the query workflow."""
         logger.info("Query received. Routing to query pipeline...")
         try:
-            initial_context = {"question": input_data.get("question")}
+
+            recent_interactions = self.episodic_memory.get_recent_interactions(limit=5)
+            conversation_history = "\n".join(
+                [f"{inter.agent_name}: {inter.content}" for inter in recent_interactions]
+            )
+            persona = self.core_memory.get_persona()
+            import json
+            print(f"\n\nPERSONA: {persona}\n\n")
+
+            initial_context = {
+                "question": input_data.get("question"),
+                "conversation_history": conversation_history,
+                "persona": persona
+            }
             # The result of the workflow execution will be the final context
             result = await self._execute_workflow("query_workflow", initial_context)
             return {"status": "success", "result": result}

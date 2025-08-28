@@ -63,6 +63,12 @@ class QueryPlannerAgent:
         """
         return """You are a highly specialized planning agent. Your sole purpose is to analyze a user's question about a codebase and generate a sequence of tool calls to gather the necessary information.
 
+**CONVERSATION HISTORY:**
+Use the following history to understand the context of the user's current question, especially for follow-up questions or pronouns.
+---
+{conversation_history}
+---
+
 **CRITICAL INSTRUCTIONS:**
 1.  **DO NOT answer the user's question directly.**
 2.  **YOU MUST ONLY respond with a valid JSON object.**
@@ -107,6 +113,8 @@ Your Response (JSON):
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Generates a query plan without executing it."""
         question = input_data.get("question", "").strip()
+        conversation_history = input_data.get("conversation_history", "No history available.")
+
         if not question:
             return {"status": "error", "message": "No question provided."}
 
@@ -132,6 +140,7 @@ Your Response (JSON):
             agent_output = await self.agent_runnable.ainvoke({
                 "input": question,
                 "initial_context": initial_context_str,
+                "conversation_history": conversation_history,
                 "intermediate_steps": [],
             })
             
@@ -143,10 +152,6 @@ Your Response (JSON):
             # Parse the JSON string to get the plan
             plan_data = json.loads(json_output)
             plan = plan_data["plan"]
-
-            print("\nGenerated Plan:")
-            print(json.dumps(plan, indent=2))
-            print()
 
             if not plan:
                 logger.warning("Agent generated an empty plan.")

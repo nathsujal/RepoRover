@@ -78,3 +78,8 @@ class CoreMemory:
     def get_user_preferences(self) -> UserPreferences:
         """Returns the current user preferences."""
         return self.data.user_preferences
+
+
+if __name__ == "__main__":
+    core = CoreMemory(Path("data/memory/core_memory.json"))
+    print(core.get_persona())

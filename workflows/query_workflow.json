@@ -25,7 +25,9 @@
             "agent": "synthesizer",
             "input": {
                 "question": "{{question}}",
-                "plan": "{{retrieved_data.collected_data}}"
+                "plan": "{{retrieved_data.collected_data}}",
+                "conversation_history": "{{conversation_history}}",
+                "persona": "{{persona}}"
             },
             "output": "final_response",
             "description": "Synthesize the final response from the collected data."
