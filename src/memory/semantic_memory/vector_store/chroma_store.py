@@ -175,7 +175,7 @@ class ChromaVectorStore(BaseVectorStore[VectorDocument]):
             ids = [doc.id for doc in documents]
             self._collection.upsert(
                 ids=ids,
-                documents=[doc.content for doc in documents],
+                documents=[f"{doc.id}: {doc.content}" for doc in documents],
                 metadatas=[doc.metadata for doc in documents],
             )
             return ids
