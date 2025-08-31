@@ -258,15 +258,11 @@ class EntityLookupTool(BaseTool):
                 "requested_count": len(entity_ids)
             }
     
-    async def _get_entity(self, entity_id: str) -> Optional[Any]:
+    async def _get_entity(self, entity_id: str) -> List[Any] | None:
         """Helper to get entity, handling both sync and async entity_store methods."""
         try:
-            if hasattr(self.semantic_memory.entity_store, 'get_entity'):
-                result = self.semantic_memory.entity_store.get_entity(entity_id)
-                # Check if result is awaitable
-                if hasattr(result, '__await__'):
-                    return await result
-                return result
+            result = self.semantic_memory.entity_store.get_entities(entity_id)
+            return result
         except Exception as e:
             logger.warning(f"Error getting entity {entity_id}: {e}")
         return None
@@ -274,96 +270,3 @@ class EntityLookupTool(BaseTool):
     def _run(self, entity_ids: List[str]) -> Dict[str, Any]:
         """Sync implementation - not recommended for async operations."""
         raise NotImplementedError("Use async version (_arun) instead")
-
-
-class CodeSearchInput(BaseModel):
-    """Input schema for code search."""
-    query: str = Field(description="Search query for code patterns or specific implementations")
-    file_type: Optional[str] = Field(default=None, description="Optional file type filter (e.g., '.py', '.js')")
-    limit: int = Field(default=5, description="Maximum number of results to return")
-
-
-# class CodeSearchTool(BaseTool):
-#     """Tool for searching specific code patterns or implementations."""
-    
-#     name: str = "code_search"
-#     description: str = (
-#         "Searches for specific code patterns, function names, or implementations. "
-#         "More targeted than semantic search for finding exact matches or similar code structures."
-#     )
-#     args_schema: type[BaseModel] = CodeSearchInput
-    
-#     def __init__(self, semantic_memory, **kwargs):
-#         super().__init__(**kwargs)
-#         object.__setattr__(self, '_semantic_memory', semantic_memory)
-    
-#     @property
-#     def semantic_memory(self):
-#         return self._semantic_memory
-    
-#     async def _arun(self, query: str, file_type: Optional[str] = None, limit: int = 5) -> Dict[str, Any]:
-#         """Async implementation of the tool."""
-#         try:
-#             logger.info(f"Performing code search for: '{query}' (file_type: {file_type}, limit: {limit})")
-            
-#             # Create filter for file type if specified
-#             filters = {}
-#             if file_type:
-#                 filters["file_extension"] = file_type
-            
-#             # Perform search with filters if the vector store supports it
-#             try:
-#                 if filters:
-#                     search_results = await self.semantic_memory.vector_store.similarity_search_with_score(
-#                         query, k=limit, filter=filters
-#                     )
-#                 else:
-#                     search_results = await self.semantic_memory.vector_store.similarity_search_with_score(
-#                         query, k=limit
-#                     )
-#             except TypeError:
-#                 # Fallback if filter parameter is not supported
-#                 search_results = await self.semantic_memory.vector_store.similarity_search_with_score(
-#                     query, k=limit
-#                 )
-            
-#             formatted_results = []
-#             for doc, score in search_results:
-#                 content = doc.content
-#                 metadata = doc.metadata if hasattr(doc, 'metadata') else {}
-                
-#                 # Apply file type filtering manually if needed
-#                 if file_type:
-#                     file_path = metadata.get("file_path", "")
-#                     if not file_path.endswith(file_type):
-#                         continue
-                
-#                 # Only include code-related results
-#                 if any(keyword in content.lower() for keyword in ['def ', 'function', 'class ', 'import ', 'from ', '{', '}', '(']):
-#                     formatted_results.append({
-#                         "content": content,
-#                         "metadata": metadata,
-#                         "similarity_score": float(score),
-#                         "file_path": metadata.get("file_path", "unknown"),
-#                         "entity_type": metadata.get("entity_type", "code")
-#                     })
-            
-#             logger.info(f"Found {len(formatted_results)} code matches")
-#             return {
-#                 "status": "success",
-#                 "results": formatted_results,
-#                 "total_found": len(formatted_results)
-#             }
-
-#         except Exception as e:
-#             logger.error(f"Error in code search: {e}")
-#             return {
-#                 "status": "error",
-#                 "error": str(e),
-#                 "results": [],
-#                 "total_found": 0
-#             }
-    
-#     def _run(self, query: str, file_type: Optional[str] = None, limit: int = 5) -> Dict[str, Any]:
-#         """Sync implementation - not recommended for async operations."""
-#         raise NotImplementedError("Use async version (_arun) instead")
