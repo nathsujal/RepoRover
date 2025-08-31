@@ -2,9 +2,10 @@
 Dispatcher Agent: Manages the ingestion workflow for a repository.
 """
 import logging
-from typing import Any, Dict, Type, List
+from typing import Any, Dict, Type
 from pathlib import Path
-
+import os
+import shutil
 from pydantic import BaseModel
 
 from .architect import ArchitectAgent
@@ -42,9 +43,17 @@ class DispatcherAgent():
         self.description = self.config.description
         self.model = None
 
+        # Clear the vector memory store
+        vector_mem_dir = "data/memory/vector_memory"
+        if os.path.exists(vector_mem_dir):
+            shutil.rmtree(vector_mem_dir)
+        # Clear the repo dir
+        repo_dir = "data/repositories"
+        if os.path.exists(repo_dir):
+            shutil.rmtree(repo_dir)
+
         # The dispatcher holds the central memory and specialist agents
         self.semantic_memory = semantic_memory
-        # core_memory_path = Path(settings.MEMORY_DIR) / "core_memory.json"
         self.core_memory = CoreMemory(file_path=Path("data/memory/core_memory.json"))
         self.episodic_memory = EpisodicMemoryManager()
         self.procedural_memory = ProceduralMemoryManager(workflow_dir="workflows")
