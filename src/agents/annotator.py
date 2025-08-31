@@ -3,7 +3,7 @@ Annotator Agent: Enriches code entities with natural language summaries.
 """
 import logging
 import asyncio
-from typing import Any, Dict, Type, List
+from typing import Any, Dict, List
 from concurrent.futures import ThreadPoolExecutor
 import gc
 import torch
@@ -22,7 +22,6 @@ class AnnotatorConfig(BaseModel):
     agent_name: str = "annotator"
     description: str = "Generates summaries for code blocks and adds embeddings."
     model_name: str = "gemma-3-4b-it"
-    model_class: Type = GeminiModel
     batch_size: int = 3
     memory_cleanup_interval: int = 5
 
