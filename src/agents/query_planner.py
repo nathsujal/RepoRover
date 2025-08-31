@@ -6,10 +6,10 @@ import logging
 import json
 from typing import Any, Dict, List
 
-from langchain.agents import create_tool_calling_agent
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from langchain_core.tools import BaseTool
 
 from src.tools import (
@@ -21,6 +21,14 @@ from src.memory.semantic_memory.manager import SemanticMemoryManager
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+class TacticalPlan(BaseModel):
+    tool: str = Field(description="The tool to be used")
+    tool_input: Dict[str, Any] = Field(description="The input to the tool")
+    reasoning: str = Field(description="The reasoning for the tool call")
+
+class TacticalPlanList(BaseModel):
+    plan: List[TacticalPlan] = Field(description="The plan of tactical steps")
 
 class QueryPlannerConfig(BaseModel):
     """Configuration for the Query Planner agent."""
@@ -41,137 +49,209 @@ class QueryPlannerAgent:
         self.description = self.config.description
         self.semantic_memory = semantic_memory
         
-        tools = self.create_query_planner_tools(self.semantic_memory)
+        self.tools = self.create_query_planner_tools(self.semantic_memory)
 
-        llm = ChatGoogleGenerativeAI(
+        self.llm = ChatGoogleGenerativeAI(
             model=self.config.model_name,
             google_api_key=settings.GEMINI_API_KEY,
             temperature=self.config.temperature,
-            model_kwargs={"response_mime_type": "application/json"}  # Fixed: removed 's'
+            model_kwargs={"response_mime_type": "application/json"}
         )
 
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", self._get_system_prompt()),
-            ("human", "{input}"),
-            ("placeholder", "{agent_scratchpad}"),
-        ])
+        self.parser = JsonOutputParser(pydantic_object=TacticalPlanList)
 
-        self.agent_runnable = create_tool_calling_agent(llm, tools, prompt)
         logger.info(f"{self.name} agent initialized for planning only.")
 
-    def _get_system_prompt(self) -> str:
+    # --- Phase 1: Query Analysis & Decomposition ---
+    async def _analyze_and_decompose_query(self, question: str, history: str) -> Dict[str, Any]:
         """
-        Get the strict system prompt for the agent to force plan generation
-        in a specific JSON format.
+        Analyzes the query to determine its type and complexity, and decomposes
+        complex queries into sub-questions.
         """
-        return """You are a highly specialized planning agent. Your sole purpose is to analyze a user's question about a codebase and generate a sequence of tool calls to gather the necessary information.
+        logger.info("Phase 1: Analyzing and decomposing the query.")
+        prompt = f"""
+        Analyze the user's question about a software repository based on the conversation history.
 
-**CONVERSATION HISTORY:**
-Use the following history to understand the context of the user's current question, especially for follow-up questions or pronouns.
----
-{conversation_history}
----
+        1.  **Classify the Query Type**: Choose the most fitting category:
+            - `architecture`: For high-level questions about the structure, design, components, and relationships in the codebase.
+            - `code_or_doc`: For specific questions about a particular function, class, file, or piece of documentation.
+
+        2.  **Assess Complexity**: Is this a `simple` question (can be answered in 1-2 steps) or a `complex` one (requires multiple steps and combining information)?
+
+        3.  **Decompose if Complex**: If the query is complex, break it down into a logical sequence of smaller, answerable sub-questions.
+
+        **Conversation History**:
+        ---
+        {history}
+        ---
+        **User Question**: "{question}"
+
+        **Output Format (JSON only)**:
+        {{
+          "query_type": "...",
+          "complexity": "...",
+          "sub_questions": ["..."]
+        }}
+        """
+        response = await self.llm.ainvoke(prompt)
+        try:
+            analysis = json.loads(response.content)
+            # If it's simple, the main question is the only sub-question
+            if analysis.get("complexity") == "simple":
+                analysis["sub_questions"] = [question]
+            logger.info(f"Query analysis complete: {analysis}")
+            return analysis
+        except (json.JSONDecodeError, KeyError) as e:
+            logger.error(f"Failed to analyze query, treating as simple. Error: {e}")
+            return {
+                "query_type": "exploratory",
+                "complexity": "simple",
+                "sub_questions": [question]
+            }
+
+    def _get_code_or_doc_system_prompt(self, query_type: str, history: str) -> str:
+        """Get the system prompt for code or documentation questions."""
+        return f"""You are a specialized planning agent for code and documentation questions.
 
 **CRITICAL INSTRUCTIONS:**
 1.  **DO NOT answer the user's question directly.**
 2.  **YOU MUST ONLY respond with a valid JSON object.**
-3.  The JSON object must conform to the specified `OUTPUT FORMAT`.
-4.  If you cannot determine a tool to call, respond with a JSON object containing an empty "plan" list.
+3.  Your plan should follow this sequence:
+    a. First, use the `semantic_search` tool to find the most relevant code snippets or documentation sections.
+    b. Next, from the results of the `semantic_search`, identify the key entity IDs.
+    c. Finally, use the `entity_lookup` tool to get the full details of those entities, or the `graph_query` tool to explore their relationships.
 
-**AVAILABLE TOOLS:**
-- `semantic_search`: Use for broad, conceptual searches.
-- `graph_query`: Use to explore relationships between known code entities.
-- `entity_lookup`: Use to retrieve the full source code of a specific entity.
+**Available Tools**:
+    - semantic_search: Search for semantically similar content.
+    - entity_lookup: Find entities list (ID is optional).
+    - graph_query: Find relationships between entities.
 
-**OUTPUT FORMAT:**
-You must respond with a JSON object with a single key, "plan".
-The value of "plan" must be a list of JSON objects, where each object represents a single step in the plan.
-Each step object must have two keys:
-- "tool": A string representing the name of the tool to call.
-- "tool_input": An object containing the arguments for the tool.
+**Conversation History**:
+---
+{history}
+---
 
-**EXAMPLE:**
-User Question: "How does the 'process_data' function work?"
-Your Response (JSON):
-```json
-{{
-  "plan": [
-    {{
-      "tool": "code_search",
-      "tool_input": {{
-        "query": "def process_data"
-      }}
-    }},
-    {{
-      "tool": "graph_query",
-      "tool_input": {{
-        "entity_ids": ["function:utils.py:process_data"],
-        "query_type": "find_callers"
-      }}
-    }}
-  ]
-}}
-```"""
+**Query Type**: {query_type}
+"""
 
+    def _get_architecture_system_prompt(self, query_type: str, history: str) -> str:
+        """Get the system prompt for architecture questions."""
+        return f"""You are a specialized planning agent for architecture and design questions.
+
+**CRITICAL INSTRUCTIONS:**
+1.  **DO NOT answer the user's question directly.**
+2.  **YOU MUST ONLY respond with a valid JSON object.**
+3.  Your plan should follow this sequence:
+    a. First, use the `entity_lookup` tool to retrieve a list of all relevant entities (e.g., all classes, all functions). You can use wildcards like `class:*:*` to get all classes.
+    b. Next, use the `graph_query` tool with the retrieved entity IDs to understand their relationships (e.g., find_callers, find_callees).
+    c. If needed, you can use `semantic_search` on the results of the graph query to get more context.
+
+**Available Tools**:
+    - semantic_search: Search for semantically similar content.
+    - entity_lookup: Find entities list (ID is optional).
+    - graph_query: Find relationships between entities.
+
+**Conversation History**:
+---
+{history}
+---
+
+**Query Type**: {query_type}
+"""
+
+
+    def _get_system_prompt(self, query_type: str, history: str) -> str:
+        if query_type == "code_or_doc":
+            return self._get_code_or_doc_system_prompt(query_type, history)
+        elif query_type == "architecture":
+            return self._get_architecture_system_prompt(query_type, history)
+        else:
+            raise ValueError(f"Unknown query type: {query_type}")
+
+
+    # --- Phase 3: Tactical Plan Generation ---
+    async def _generate_tactical_plan(self, question: str, query_type: str, history: str) -> List[Dict[str, Any]]:
+        """Generates the detailed tool call plan for a single (sub-)question."""
+        
+        # prompt_template = ChatPromptTemplate.from_messages([
+        #     ("system", self._get_system_prompt(query_type, history)),
+        #     ("human", "{question}"),
+        #     ("placeholder", "{agent_scratchpad}")
+        # ])
+
+        # planner = create_tool_calling_agent(self.llm, self.tools, prompt)
+        # response = await planner.ainvoke({
+        #     "system_prompt": self._get_system_prompt(query_type, history),
+        #     "query": question,
+        #     "intermediate_steps": [],
+        # })
+
+        prompt = PromptTemplate(
+            template="""{system_prompt}\n\nQuery: {query}\n\n{format_instructions}""",
+            input_variables=["system_prompt","query"],
+            partial_variables={"format_instructions": self.parser.get_format_instructions()},
+            )
+
+        chain = prompt | self.llm | self.parser
+        response = await chain.ainvoke({
+            "system_prompt": self._get_system_prompt(query_type, history),
+            "query": question,
+        })
+
+        print("\n\nResponse: ")
+        print(response)
+        print("\n\n")
+        
+        plan = response["plan"]
+
+        print()
+        print(json.dumps(plan, indent=2))
+        print()
+
+        if not plan:
+            logger.warning("Query Planner Agent generated an empty plan.")
+            return {"status": "error", "message": "The agent could not determine a plan of action."}
+        
+        logger.info(f"Successfully generated plan with {len(plan)} steps.")
+        return {"status": "success", "plan": plan}
+    
+
+    # --- Orchestrator ---
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Generates a query plan without executing it."""
+        """
+        Orchestrates the multi-phase planning process.
+        """
         question = input_data.get("question", "").strip()
-        conversation_history = input_data.get("conversation_history", "No history available.")
+        history = input_data.get("conversation_history", "No history available.")
 
         if not question:
             return {"status": "error", "message": "No question provided."}
 
-        logger.info(f"Generating a query plan for question: '{question}'")
-        try:
-            logger.info("Performing preliminary semantic search to gather context...")
-            semantic_search_tool = SemanticSearchTool(self.semantic_memory)
-            search_results = await semantic_search_tool._arun(query=question, limit=5)
+        # Phase 1: Analyze and Decompose
+        analysis = await self._analyze_and_decompose_query(question, history)
+        
+        full_plan = []
+        # Generate a plan for each sub-question
+        for sub_question in analysis["sub_questions"]:
+            # Phase 2: Identify Query type
+            query_type = analysis["query_type"]
             
-            # Format the search results into a string for the prompt
-            initial_context_str = "No initial context found."
-            if search_results.get("status") == "success" and search_results.get("results"):
-                formatted_results = []
-                for res in search_results["results"]:
-                    content = res.get("content", "").strip().replace('\n', ' ')
-                    entity_id = content.split(': ')[0].strip()
-                    content = content.split(': ')[1].strip()
-                    formatted_results.append(f"- Entity: {entity_id}\nContent: {content}\n")
-                initial_context_str = "\n".join(formatted_results)
-            
-            logger.info(f"Initial context gathered:\n{initial_context_str}")
+            # Phase 3: Generate Tactical Plan
+            tactical_plan = await self._generate_tactical_plan(sub_question, query_type, history)
 
-            agent_output = await self.agent_runnable.ainvoke({
-                "input": question,
-                "initial_context": initial_context_str,
-                "conversation_history": conversation_history,
-                "intermediate_steps": [],
-            })
+            logger.info(f"Tactical Plan for sub-question '{sub_question}': \n{tactical_plan}")
             
-            logger.info(f"Raw agent output after context enrichment: {agent_output}")
+            full_plan.extend(tactical_plan['plan'])
 
-            # Extract the JSON output from the agent response
-            json_output = agent_output.return_values["output"]
-            
-            # Parse the JSON string to get the plan
-            plan_data = json.loads(json_output)
-            plan = plan_data["plan"]
+        if not full_plan:
+            return {"status": "error", "message": "The agent could not determine a plan of action."}
 
-            if not plan:
-                logger.warning("Agent generated an empty plan.")
-                return {"status": "error", "message": "The agent could not determine a plan of action."}
-
-            logger.info(f"Successfully generated plan with {len(plan)} steps.")
-            return {"status": "success", "plan": plan}
-            
-        except KeyError as e:
-            logger.error(f"Missing expected key in agent output: {e}")
-            return {"status": "error", "message": f"Invalid agent response structure: missing {e}"}
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON: {e}")
-            return {"status": "error", "message": "Failed to parse JSON response from agent"}
-        except Exception as e:
-            logger.exception(f"Error generating plan for question: '{question}'")
-            return {"status": "error", "message": str(e)}
+        logger.info(f"Successfully generated a full plan with {len(full_plan)} steps.")
+        return {
+            "status": "success",
+            "plan": full_plan,
+            "analysis": analysis
+        }
 
     def create_query_planner_tools(self, semantic_memory: SemanticMemoryManager) -> List[BaseTool]:
         """Factory function to create all query planner tools."""
