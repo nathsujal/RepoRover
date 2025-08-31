@@ -39,22 +39,25 @@ class SQLiteEntityStore:
                 (entity.unique_id, entity.type, entity.summary, entity.details, entity.code, entity.source)
             )
 
-    def get_entity(self, unique_id: str) -> Optional[Entity]:
-        self.cursor.execute("SELECT * FROM entities WHERE unique_id=?", (unique_id,))
-        row = self.cursor.fetchone()
-        if row:
-            return Entity(unique_id=row[0], type=row[1], summary=row[2], details=row[3], code=row[4], source=row[5])
+    def get_entities(self, unique_id: str | None) -> List[Entity] | None:
+        if unique_id:
+            self.cursor.execute("SELECT * FROM entities WHERE unique_id=?", (unique_id,))
+        else:
+            self.cursor.execute("SELECT * FROM entities")
+        rows = self.cursor.fetchall()
+        if rows:
+            # Convert the list of tuples into a list of Entity objects
+            return [Entity(unique_id=row[0], type=row[1], summary=row[2], details=row[3], code=row[4], source=row[5]) for row in rows]
         return None
 
     def find_entities_by_type(self, entity_type: str) -> List[Entity]:
         """Finds all entities in the database matching a specific type."""
         self.cursor.execute("SELECT * FROM entities WHERE type=?", (entity_type,))
         rows = self.cursor.fetchall()
-
         return [Entity(unique_id=r[0], type=r[1], summary=r[2], details=r[3], code=r[4], source=r[5]) for r in rows]
 
     def clear(self) -> None:
         """Deletes all records from the entities table."""
         with self.conn:
             self.cursor.execute("DELETE FROM entities")
-        logger.info("SQLite entity store has been cleared.")
+        logger.info("SQLite entity store has bee    n cleared.")
