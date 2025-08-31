@@ -5,7 +5,7 @@ Synthesizer Agent: Generates a final, human-readable response from the collected
 import logging
 from typing import Any, Dict, List
 
-from src.models.geminiModel import GeminiModel
+from src.models.groqModel import GroqModel
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ class SynthesizerAgent:
     def __init__(self):
         self.name = "synthesizer"
         self.description = "Generates a final response from a query plan."
-        self.model = GeminiModel()
+        self.model = GroqModel()
         logger.info(f"{self.name} agent initialized.")
 
     def _create_synthesis_prompt(self, question: str, plan_results: List[Dict[str, Any]], conversation_history: str, persona: Dict[str, Any]) -> str:
@@ -33,15 +33,32 @@ class SynthesizerAgent:
             persona_prompt = f"Your Persona: {persona.description}. Your instructions are: {' '.join(persona.instructions)}"
 
 
-        return (
-            f"{persona_prompt}\n\n"
-            f"Based on the following conversation history, answer the user's latest question.\n"
-            f"--- CONVERSATION HISTORY ---\n{conversation_history}\n--------------------------\n\n"
-            f"You have run a series of tools to gather information. Here is the data you collected:\n"
-            f"--- TOOL RESULTS ---\n{context}\n---------------------\n\n"
-            f"User's final question: {question}\n\n"
-            f"Provide a clear, concise, and helpful answer to the user's question, keeping your persona and the conversation history in mind."
-        )
+        return f"""
+{persona_prompt}
+
+**Background Information:**
+The following information was retrieved from the code repository to help you answer the user's question.
+---
+{context}
+---
+
+**Conversation History (for context on follow-up questions only, DO NOT mention it in your answer):**
+---
+{conversation_history}
+---
+
+**Your Task:**
+Based *only* on the Background Information provided, answer the user's question in a direct, clear, and concise manner.
+
+**CRITICAL RULES:**
+1.  **Be Direct:** Do not talk about "tools," "data collection," "conversation history," or your own reasoning process. Just provide the answer as if you already knew it.
+2.  **Synthesize, Don't Announce:** Seamlessly integrate the information into a natural, human-like response.
+3.  **Handle Missing Information:** If the Background Information explicitly states that no information was found, your ONLY response must be to inform the user that you could not find the answer within the repository. Do not suggest further actions.
+
+**User's Question:** {question}
+
+**Answer:**
+"""
 
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Synthesizes a response from a query plan."""
