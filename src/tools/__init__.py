@@ -1,11 +1,19 @@
 from .semantic_memory_tools import (
-    SemanticSearchTool,
-    GraphQueryTool,
-    EntityLookupTool,
+    SemanticSearch,
+    FindNodes,
+    FindCallers,
+    FindCallees,
+    GetEntityById,
+    GetEntitiesByType,
+    GetAllEntities,
 )
 
 __all__ = [
-    "SemanticSearchTool",
-    "GraphQueryTool",
-    "EntityLookupTool",
+    "SemanticSearch",
+    "FindNodes",
+    "FindCallers",
+    "FindCallees",
+    "GetEntityById",
+    "GetEntitiesByType",
+    "GetAllEntities",
 ]

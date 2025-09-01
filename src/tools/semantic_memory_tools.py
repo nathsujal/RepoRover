@@ -1,13 +1,19 @@
 """
-Tools for the Query Planner Agent to interact with semantic memory.
+A collection of fine-grained tools for the Query Planner Agent to interact
+with the different components of semantic memory. Each tool has a single,
+well-defined purpose to avoid confusing the AI agent.
 """
 from typing import Any, Dict, List, Optional
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 
+# ==============================================================================
+# Tool 1: Semantic Search (Vector Store)
+# ==============================================================================
 
 class SemanticSearchInput(BaseModel):
     """Input schema for semantic search."""
@@ -15,26 +21,32 @@ class SemanticSearchInput(BaseModel):
     limit: int = Field(default=10, description="Maximum number of results to return")
 
 
-class SemanticSearchTool(BaseTool):
-    """Tool for performing semantic search on repository content."""
-    
+class SemanticSearch(BaseTool):
+    """
+    Searches docs and code summaries for concepts semantically similar to the query.
+    This is the best tool for broad, conceptual searches or when you don't know the
+    exact name or ID of what you're looking for.
+    """
     name: str = "semantic_search"
     description: str = (
         "Searches docs and code summaries for concepts semantically similar to the query. "
-        "Best for the first step to get a broad overview of relevant entities. "
-        "Input should be a search query string."
+        "Best for broad, conceptual searches to get an overview of relevant entities."
     )
     args_schema: type[BaseModel] = SemanticSearchInput
-    
+
     def __init__(self, semantic_memory, **kwargs):
         super().__init__(**kwargs)
-        # Store semantic_memory in a way that doesn't conflict with Pydantic
         object.__setattr__(self, '_semantic_memory', semantic_memory)
-    
+
     @property
     def semantic_memory(self):
         return self._semantic_memory
-    
+
+    def _run(self, query: str, limit: int = 10) -> Dict[str, Any]:
+        """Synchronous execution wrapper for the tool."""
+        # This is a simple way to run the async method in a sync context.
+        return asyncio.run(self._arun(query, limit))
+
     async def _arun(self, query: str, limit: int = 10) -> Dict[str, Any]:
         """Async implementation of the tool."""
         try:
@@ -44,7 +56,6 @@ class SemanticSearchTool(BaseTool):
             formatted_results = []
             for doc, score in search_results:
                 metadata = doc.metadata if hasattr(doc, 'metadata') else {}
-                # Ensure entity_id is in the metadata for other tools to use
                 if 'id' not in metadata:
                     metadata['entity_id'] = doc.id
                 
@@ -55,218 +66,240 @@ class SemanticSearchTool(BaseTool):
                 })
             
             logger.info(f"Found {len(formatted_results)} semantic matches")
-            return {
-                "status": "success",
-                "results": formatted_results,
-                "total_found": len(formatted_results)
-            }
-
+            return {"status": "success", "results": formatted_results}
         except Exception as e:
             logger.error(f"Error in semantic search: {e}")
-            return {
-                "status": "error",
-                "error": str(e),
-                "results": [],
-                "total_found": 0
-            }
-    
-    def _run(self, query: str, limit: int = 10) -> Dict[str, Any]:
-        """Sync implementation - not recommended for async operations."""
-        raise NotImplementedError("Use async version (_arun) instead")
+            return {"status": "error", "error": str(e)}
 
+# ==============================================================================
+# Tool 2: Find Nodes in Graph
+# ==============================================================================
 
-class GraphQueryInput(BaseModel):
-    """Input schema for graph queries."""
-    entity_ids: List[str] = Field(description="List of entity IDs to query relationships for")
-    query_type: str = Field(
-        default="find_related",
-        description="Type of query: 'find_callers', 'find_callees', or 'find_related'"
-    )
+class FindNodesInput(BaseModel):
+    """Input schema for finding nodes in the graph."""
+    labels: Optional[List[str]] = Field(default=None, description="A list of node types (labels) to search for, e.g., ['function', 'class'].")
+    properties: Optional[Dict[str, Any]] = Field(default=None, description="A dictionary of properties to filter nodes by.")
 
+class FindNodes(BaseTool):
+    """
+    Finds nodes in the knowledge graph based on their type (label) and/or properties.
+    Useful for getting a list of all functions, classes, or nodes that match
+    specific criteria.
+    """
+    name: str = "find_nodes"
+    description: str = "Finds nodes in the knowledge graph based on their type (label) and/or properties."
+    args_schema: type[BaseModel] = FindNodesInput
 
-class GraphQueryTool(BaseTool):
-    """Tool for querying the knowledge graph for entity relationships."""
-    
-    name: str = "graph_query"
-    description: str = (
-        "Given entity IDs, finds their direct callers, callees, or related entities in the code graph. "
-        "Useful for understanding code flow and dependencies. "
-        "Query types: 'find_callers', 'find_callees', 'find_related'"
-    )
-    args_schema: type[BaseModel] = GraphQueryInput
-    
     def __init__(self, semantic_memory, **kwargs):
         super().__init__(**kwargs)
         object.__setattr__(self, '_semantic_memory', semantic_memory)
-    
+
     @property
     def semantic_memory(self):
         return self._semantic_memory
-    
-    async def _arun(self, entity_ids: List[str], query_type: str = "find_related") -> Dict[str, Any]:
+
+    def _run(self, labels: Optional[List[str]] = None, properties: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Synchronous execution wrapper."""
+        return asyncio.run(self._arun(labels, properties))
+
+    async def _arun(self, labels: Optional[List[str]] = None, properties: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Async implementation of the tool."""
         try:
-            logger.info(f"Performing graph query: {query_type} for {len(entity_ids)} entities")
-            relationships: List[Dict[str, Any]] = []
-
-            for entity_id in entity_ids:
-                if query_type == "find_callers":
-                    callers = await self._get_callers(entity_id)
-                    for caller_id in callers:
-                        relationships.append({
-                            "type": "calls",
-                            "source_id": caller_id,
-                            "target_id": entity_id,
-                            "relationship": "caller"
-                        })
-                elif query_type == "find_callees":
-                    callees = await self._get_callees(entity_id)
-                    for callee_id in callees:
-                        relationships.append({
-                            "type": "calls",
-                            "source_id": entity_id,
-                            "target_id": callee_id,
-                            "relationship": "callee"
-                        })
-                else:  # find_related
-                    callers = await self._get_callers(entity_id)
-                    callees = await self._get_callees(entity_id)
-                    for caller_id in callers:
-                        relationships.append({
-                            "type": "related",
-                            "source_id": caller_id,
-                            "target_id": entity_id,
-                            "relationship": "caller"
-                        })
-                    for callee_id in callees:
-                        relationships.append({
-                            "type": "related",
-                            "source_id": entity_id,
-                            "target_id": callee_id,
-                            "relationship": "callee"
-                        })
-
-            entity_ids_in_results = {rel.get(k) for rel in relationships for k in ("source_id", "target_id") if rel.get(k)}
-            logger.info(f"Found {len(relationships)} relationships involving {len(entity_ids_in_results)} entities")
-            
-            return {
-                "status": "success",
-                "relationships": relationships, 
-                "entity_count": len(entity_ids_in_results)
-            }
-                
+            logger.info(f"Finding nodes with labels: {labels} and properties: {properties}")
+            nodes = self.semantic_memory.graph_db.find_nodes(labels=labels, properties=properties)
+            result_nodes = [node.model_dump() for node in nodes]
+            return {"status": "success", "nodes": result_nodes, "count": len(result_nodes)}
         except Exception as e:
-            logger.error(f"Error in graph query: {e}")
-            return {
-                "status": "error",
-                "error": str(e),
-                "relationships": [], 
-                "entity_count": 0
-            }
-    
-    async def _get_callers(self, entity_id: str) -> List[str]:
-        """Helper to get callers, handling both sync and async graph_db methods."""
-        try:
-            if hasattr(self.semantic_memory.graph_db, 'find_callers'):
-                result = self.semantic_memory.graph_db.find_callers(entity_id)
-                # Check if result is awaitable
-                if hasattr(result, '__await__'):
-                    return await result
-                return result if result else []
-        except Exception as e:
-            logger.warning(f"Error getting callers for {entity_id}: {e}")
-        return []
-    
-    async def _get_callees(self, entity_id: str) -> List[str]:
-        """Helper to get callees, handling both sync and async graph_db methods."""
-        try:
-            if hasattr(self.semantic_memory.graph_db, 'find_callees'):
-                result = self.semantic_memory.graph_db.find_callees(entity_id)
-                # Check if result is awaitable
-                if hasattr(result, '__await__'):
-                    return await result
-                return result if result else []
-        except Exception as e:
-            logger.warning(f"Error getting callees for {entity_id}: {e}")
-        return []
-    
-    def _run(self, entity_ids: List[str], query_type: str = "find_related") -> Dict[str, Any]:
-        """Sync implementation - not recommended for async operations."""
-        raise NotImplementedError("Use async version (_arun) instead")
+            logger.error(f"Error in find_nodes: {e}")
+            return {"status": "error", "error": str(e)}
 
+# ==============================================================================
+# Tool 3: Find Callers of a Node
+# ==============================================================================
 
-class EntityLookupInput(BaseModel):
-    """Input schema for entity lookup."""
-    entity_ids: List[str] = Field(description="List of entity IDs to retrieve detailed information for")
+class FindCallersInput(BaseModel):
+    """Input schema for finding callers."""
+    node_id: str = Field(description="The unique ID of the node (e.g., a function) to find the callers of.")
 
+class FindCallers(BaseTool):
+    """
+    Given a specific node's ID, finds all nodes that have an edge pointing to it.
+    Crucial for understanding how and where a function or class is used.
+    """
+    name: str = "find_callers"
+    description: str = "Given a node's ID, finds all nodes that call it."
+    args_schema: type[BaseModel] = FindCallersInput
 
-class EntityLookupTool(BaseTool):
-    """Tool for looking up detailed entity information."""
-    
-    name: str = "entity_lookup"
-    description: str = (
-        "Given a list of entity IDs, retrieves their full details including raw source code. "
-        "Use this when you need the full implementation details of specific code entities."
-    )
-    args_schema: type[BaseModel] = EntityLookupInput
-    
     def __init__(self, semantic_memory, **kwargs):
         super().__init__(**kwargs)
         object.__setattr__(self, '_semantic_memory', semantic_memory)
-    
+
     @property
     def semantic_memory(self):
         return self._semantic_memory
-    
+
+    def _run(self, node_id: str) -> Dict[str, Any]:
+        """Synchronous execution wrapper."""
+        return asyncio.run(self._arun(node_id))
+
+    async def _arun(self, node_id: str) -> Dict[str, Any]:
+        """Async implementation of the tool."""
+        try:
+            logger.info(f"Finding callers for node: '{node_id}'")
+            callers = self.semantic_memory.graph_db.find_callers(node_id)
+            return {"status": "success", "node_id": node_id, "callers": callers, "count": len(callers)}
+        except Exception as e:
+            logger.error(f"Error in find_callers: {e}")
+            return {"status": "error", "error": str(e)}
+
+# ==============================================================================
+# Tool 4: Find Callees of a Node
+# ==============================================================================
+
+class FindCalleesInput(BaseModel):
+    """Input schema for finding callees."""
+    node_id: str = Field(description="The unique ID of the node to find the callees of.")
+
+class FindCallees(BaseTool):
+    """
+    Given a specific node's ID, finds all nodes it has an edge pointing to.
+    Essential for understanding what other functions a piece of code depends on.
+    """
+    name: str = "find_callees"
+    description: str = "Given a node's ID, finds all nodes that it calls."
+    args_schema: type[BaseModel] = FindCalleesInput
+
+    def __init__(self, semantic_memory, **kwargs):
+        super().__init__(**kwargs)
+        object.__setattr__(self, '_semantic_memory', semantic_memory)
+
+    @property
+    def semantic_memory(self):
+        return self._semantic_memory
+
+    def _run(self, node_id: str) -> Dict[str, Any]:
+        """Synchronous execution wrapper."""
+        return asyncio.run(self._arun(node_id))
+
+    async def _arun(self, node_id: str) -> Dict[str, Any]:
+        """Async implementation of the tool."""
+        try:
+            logger.info(f"Finding callees for node: '{node_id}'")
+            callees = self.semantic_memory.graph_db.find_callees(node_id)
+            return {"status": "success", "node_id": node_id, "callees": callees, "count": len(callees)}
+        except Exception as e:
+            logger.error(f"Error in find_callees: {e}")
+            return {"status": "error", "error": str(e)}
+
+# ==============================================================================
+# Tool 5: Get Entity by ID (Entity Store)
+# ==============================================================================
+
+class GetEntityByIdInput(BaseModel):
+    """Input schema for getting entities by ID."""
+    entity_ids: List[str] = Field(description="A list of unique entity IDs to retrieve.")
+
+class GetEntityById(BaseTool):
+    """
+    Retrieves the full details for one or more specific entities given their unique IDs.
+    """
+    name: str = "get_entity_by_id"
+    description: str = "Retrieves full details for specific entities given their unique IDs."
+    args_schema: type[BaseModel] = GetEntityByIdInput
+
+    def __init__(self, semantic_memory, **kwargs):
+        super().__init__(**kwargs)
+        object.__setattr__(self, '_semantic_memory', semantic_memory)
+
+    @property
+    def semantic_memory(self):
+        return self._semantic_memory
+
+    def _run(self, entity_ids: List[str]) -> Dict[str, Any]:
+        """Synchronous execution wrapper."""
+        return asyncio.run(self._arun(entity_ids))
+
     async def _arun(self, entity_ids: List[str]) -> Dict[str, Any]:
         """Async implementation of the tool."""
         try:
-            logger.info(f"Looking up details for {len(entity_ids)} entities")
-            entities: List[Dict[str, Any]] = []
-            
-            for entity_id in entity_ids:
-                entity = await self._get_entity(entity_id)
-                if entity:
-                    # Convert to dict if it's a Pydantic model
-                    if hasattr(entity, 'model_dump'):
-                        entities.append(entity.model_dump())
-                    elif hasattr(entity, 'dict'):
-                        entities.append(entity.dict())
-                    elif isinstance(entity, dict):
-                        entities.append(entity)
-                    else:
-                        # Fallback for other types
-                        entities.append({"id": entity_id, "data": str(entity)})
-                else:
-                    logger.warning(f"Entity not found: {entity_id}")
-            
-            logger.info(f"Successfully retrieved {len(entities)} entity details")
-            return {
-                "status": "success",
-                "entities": entities, 
-                "found_count": len(entities),
-                "requested_count": len(entity_ids)
-            }
-            
+            logger.info(f"Looking up details for {len(entity_ids)} entities by ID.")
+            entities = [self.semantic_memory.entity_store.get_entity(eid) for eid in entity_ids]
+            found_entities = [e.model_dump() for e in entities if e]
+            return {"status": "success", "entities": found_entities}
         except Exception as e:
-            logger.error(f"Error in entity lookup: {e}")
-            return {
-                "status": "error",
-                "error": str(e),
-                "entities": [], 
-                "found_count": 0,
-                "requested_count": len(entity_ids)
-            }
+            logger.error(f"Error in get_entity_by_id: {e}")
+            return {"status": "error", "error": str(e)}
+
+# ==============================================================================
+# Tool 6: Get Entities by Type (Entity Store)
+# ==============================================================================
+
+class GetEntitiesByTypeInput(BaseModel):
+    """Input schema for getting entities by type."""
+    entity_type: str = Field(description="The type of entities to retrieve (e.g., 'function', 'class').")
+
+class GetEntitiesByType(BaseTool):
+    """
+    Retrieves a list of all entities of a specific type.
+    """
+    name: str = "get_entities_by_type"
+    description: str = "Retrieves all entities of a specific type (e.g., 'function', 'class')."
+    args_schema: type[BaseModel] = GetEntitiesByTypeInput
+
+    def __init__(self, semantic_memory, **kwargs):
+        super().__init__(**kwargs)
+        object.__setattr__(self, '_semantic_memory', semantic_memory)
+
+    @property
+    def semantic_memory(self):
+        return self._semantic_memory
     
-    async def _get_entity(self, entity_id: str) -> List[Any] | None:
-        """Helper to get entity, handling both sync and async entity_store methods."""
+    def _run(self, entity_type: str) -> Dict[str, Any]:
+        """Synchronous execution wrapper."""
+        return asyncio.run(self._arun(entity_type))
+
+    async def _arun(self, entity_type: str) -> Dict[str, Any]:
+        """Async implementation of the tool."""
         try:
-            result = self.semantic_memory.entity_store.get_entities(entity_id)
-            return result
+            logger.info(f"Finding all entities of type: '{entity_type}'.")
+            entities = self.semantic_memory.entity_store.find_entities_by_type(entity_type)
+            found_entities = [e.model_dump() for e in entities if e]
+            return {"status": "success", "entities": found_entities, "count": len(found_entities)}
         except Exception as e:
-            logger.warning(f"Error getting entity {entity_id}: {e}")
-        return None
+            logger.error(f"Error in get_entities_by_type: {e}")
+            return {"status": "error", "error": str(e)}
+
+# ==============================================================================
+# Tool 7: Get All Entities (Entity Store)
+# ==============================================================================
+
+class GetAllEntities(BaseTool):
+    """
+    Retrieves a list of ALL entities of all types stored in the memory.
+    """
+    name: str = "get_all_entities"
+    description: str = "Retrieves a list of all entities of all types. Use with caution."
     
-    def _run(self, entity_ids: List[str]) -> Dict[str, Any]:
-        """Sync implementation - not recommended for async operations."""
-        raise NotImplementedError("Use async version (_arun) instead")
+    def __init__(self, semantic_memory, **kwargs):
+        super().__init__(**kwargs)
+        object.__setattr__(self, '_semantic_memory', semantic_memory)
+
+    @property
+    def semantic_memory(self):
+        return self._semantic_memory
+    
+    def _run(self, **kwargs) -> Dict[str, Any]:
+        """Synchronous execution wrapper."""
+        return asyncio.run(self._arun(**kwargs))
+
+    async def _arun(self, **kwargs) -> Dict[str, Any]:
+        """Async implementation of the tool."""
+        try:
+            logger.info("Retrieving all entities from the store.")
+            entities = self.semantic_memory.entity_store.get_all_entities()
+            found_entities = [e.model_dump() for e in entities if e]
+            return {"status": "success", "entities": found_entities, "count": len(found_entities)}
+        except Exception as e:
+            logger.error(f"Error in get_all_entities: {e}")
+            return {"status": "error", "error": str(e)}
+
