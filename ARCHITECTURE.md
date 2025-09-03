@@ -1,22 +1,62 @@
-# RepoRover System Architecture
+# 🏗️ RepoRover System Architecture
 
-RepoRover is a multi-agent system designed to build a deep, contextual understanding of software repositories. The architecture is centered around a **Dispatcher Agent** that orchestrates two primary, workflow-driven processes: **Ingestion** and **Querying**.
+RepoRover is an AI-powered code analysis platform that provides deep insights into GitHub repositories. The system is built on a modern, scalable architecture that combines FastAPI for the backend, AI models for code understanding, and a clean, responsive frontend.
 
----
+## 🌟 Core Principles
 
-## Core Components
+- **Modular Design**: Components are loosely coupled and follow the single responsibility principle
+- **Extensible**: Easy to add new analysis modules or integrate with different AI models
+- **Real-time Processing**: Provides immediate feedback during repository analysis
+- **Scalable**: Designed to handle repositories of various sizes efficiently
 
--   **Agents**: Specialized modules responsible for specific tasks like parsing code, generating summaries, or planning queries.
--   **Memory**: A collection of distinct memory systems that provide agents with both long-term knowledge and short-term conversational context.
--   **Workflows**: JSON-defined procedures that orchestrate the sequence of agent actions for a given high-level task.
+## 🧩 Core Components
 
----
+### 1. Backend Services
+- **FastAPI Application**: Handles HTTP requests and serves the frontend
+- **Background Task Queue**: Manages long-running repository analysis tasks
+- **API Endpoints**: 
+  - `/ingest`: Start repository ingestion
+  - `/ingest/status/{task_id}`: Check ingestion status
+  - `/query`: Submit questions about the repository
 
-## 1. The Ingestion Workflow
+### 2. AI Components
+- **Dispatcher Agent**: Orchestrates the analysis workflow
+- **Semantic Memory Manager**: Handles storage and retrieval of code knowledge
+- **AI Model Integrations**: Support for multiple AI providers (Gemini, Groq)
 
-The goal of the ingestion workflow is to deconstruct a source code repository and build a comprehensive, multi-layered knowledge base within the **Semantic Memory**.
+### 3. Frontend
+- **Single Page Application**: Built with vanilla JavaScript
+- **Responsive UI**: Using Tailwind CSS for styling
+- **Real-time Updates**: WebSocket-based updates for long-running tasks
 
-**Trigger**: A user provides a GitHub repository URL.
+### 4. Data Storage
+- **Semantic Memory**: Stores processed code information
+- **Vector Database**: For efficient similarity search of code patterns
+- **Task Status Tracking**: In-memory storage for monitoring analysis progress
+
+## 🔄 Ingestion Workflow
+
+The ingestion process transforms a GitHub repository into a structured knowledge base that can be queried naturally.
+
+### Trigger
+- User submits a GitHub repository URL through the web interface
+
+### Process Flow
+1. **Repository Cloning**
+   - Clones the target repository locally
+   - Scans the repository structure
+   - Identifies different file types and their relationships
+
+2. **Code Analysis**
+   - Parses source code files
+   - Extracts functions, classes, and their documentation
+   - Builds a semantic understanding of the codebase
+   - Identifies dependencies between components
+
+3. **Knowledge Base Population**
+   - Stores extracted information in the semantic memory
+   - Generates vector embeddings for semantic search
+   - Builds a knowledge graph of the codebase
 
 ```mermaid
 graph TD
@@ -42,11 +82,52 @@ graph TD
     F --> J[End: Ingestion Complete];
 ```
 
-## 2. The Query Workflow
+## 💬 Query Processing Workflow
 
-The query workflow leverages the populated memory stores and conversational history to answer a user's question about the codebase.
+### Trigger
+- User submits a natural language question about the codebase
 
-**Trigger**: A user provides a question about the codebase.
+### Process Flow
+1. **Query Understanding**
+   - Analyzes the user's question
+   - Identifies key concepts and intents
+   - Determines relevant parts of the codebase to examine
+
+2. **Context Retrieval**
+   - Searches the semantic memory for relevant code snippets
+   - Retrieves related documentation and examples
+   - Gathers contextual information about the code
+
+3. **Response Generation**
+   - Formulates a comprehensive answer using AI
+   - Includes relevant code examples
+   - Provides additional context and suggestions
+
+## 🚀 Deployment Architecture
+
+```
+┌─────────────────┐     ┌─────────────────────┐     ┌──────────────────┐
+│                 │     │                     │     │                  │
+│  User's Browser ├────►│  FastAPI Backend    │◄───►│  AI Models       │
+│                 │     │  (Python)           │     │  (Gemini, Groq)  │
+└─────────────────┘     └─────────┬───────────┘     └──────────────────┘
+                                  │
+                                  ▼
+                         ┌───────────────────┐
+                         │                   │
+                         │  Semantic Memory  │
+                         │  (ChromaDB)       │
+                         │                   │
+                         └───────────────────┘
+```
+
+## 🔄 Data Flow
+
+1. **Ingestion Path**
+   - GitHub Repo → FastAPI → Background Task → AI Processing → Semantic Memory
+
+2. **Query Path**
+   - User Question → FastAPI → AI Model → Semantic Memory → Response Generation → User
 
 ```mermaid
 graph TD
