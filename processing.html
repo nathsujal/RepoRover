@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Processing Repository - RepoRover</title>
+    <link href="https://www.svgrepo.com/show/530491/search-alt.svg" rel="icon" type="image/svg+xml">
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body class="bg-gray-50 text-gray-900">
+    <div class="relative flex size-full min-h-screen flex-col group/design-root overflow-x-hidden">
+        <div class="layout-container flex h-full grow flex-col">
+            <header class="flex items-center justify-center whitespace-nowrap border-b border-solid border-gray-200 px-10 py-3">
+                <div class="flex items-center gap-4 text-gray-900">
+                    <img src="static/logo.svg" alt="RepoRover Logo" class="w-8 h-8">
+                    <h2 class="text-gray-900 text-lg font-bold leading-tight tracking-[-0.015em]">RepoRover</h2>
+                </div>
+            </header>
+
+            <main class="flex flex-1 justify-center py-16 px-4">
+                <div class="w-full max-w-2xl text-center">
+                    <div class="mb-8 flex justify-center">
+                        <svg class="spin h-12 w-12 text-[var(--primary-color)]" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="currentColor"></path>
+                        </svg>
+                    </div>
+
+                    <h1 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Analyzing Repository...</h1>
+                    <p class="mt-4 text-lg text-gray-600">Please wait while we process your request. This may take a few moments.</p>
+                    <p class="mt-2 text-sm text-gray-500">Repository: <span id="current-repo" class="font-mono"></span></p>
+
+                    <div class="mt-12 bg-white rounded-lg shadow-lg p-6 text-left">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 6h16M4 12h16M4 18h7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                            </svg>
+                            Ingestion Log
+                        </h3>
+
+                        <div id="log-container" class="space-y-4 font-mono text-sm text-gray-600 max-h-64 overflow-y-auto">
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="static/js/processing.js"></script>
+</body>
+</html>

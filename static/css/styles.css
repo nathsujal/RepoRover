@@ -1,0 +1,166 @@
+/* CSS Custom Properties */
+:root {
+    --primary-color: #ea2a33;
+}
+
+/* Base Styles */
+body {
+    font-family: "Spline Sans", sans-serif;
+}
+
+/* Utility Classes */
+.hidden { 
+    display: none !important; 
+}
+
+.fade-in { 
+    animation: fadeIn 0.5s ease-in;
+}
+
+.spin { 
+    animation: spin 1s linear infinite; 
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes spin {
+    from { 
+        transform: rotate(0deg); 
+    }
+    to { 
+        transform: rotate(360deg); 
+    }
+}
+
+/* Custom Focus Styles */
+.form-input:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: var(--primary-color);
+    border-color: transparent;
+    transition: box-shadow 0.2s;
+}
+
+/* Button Hover States */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #c71f26;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Chat Message Styles */
+.message-user {
+    background-color: #3b82f6;
+    color: white;
+    border-radius: 0.5rem;
+    border-bottom-right-radius: 0;
+}
+
+.message-agent {
+    background-color: white;
+    border-radius: 0.5rem;
+    border-top-left-radius: 0;
+}
+
+/* Loading Animation */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.typing-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: #6b7280;
+    border-radius: 50%;
+    animation: pulse 1.4s ease-in-out infinite both;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+    0%, 80%, 100% {
+        opacity: 0.5;
+    }
+    40% {
+        opacity: 1;
+    }
+}
+
+/* Responsive Design Improvements */
+@media (max-width: 640px) {
+    .flex-col.sm\:flex-row {
+        flex-direction: column;
+    }
+    
+    .w-full.sm\:w-auto {
+        width: 100%;
+    }
+}
+
+/* Custom Scrollbar */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Log Container Specific Styles */
+#log-container {
+    font-family: 'Courier New', monospace;
+}
+
+/* Status Indicator Colors */
+.status-completed {
+    color: #10b981;
+}
+
+.status-progress {
+    color: var(--primary-color);
+}
+
+.status-error {
+    color: #ef4444;
+}
+
+.status-pending {
+    color: #6b7280;
+}
