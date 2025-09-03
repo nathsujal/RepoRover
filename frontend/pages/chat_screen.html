@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RepoRover - Chat</title>
+<link crossorigin="" href="https://fonts.gstatic.com/" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style type="text/tailwindcss">
+    :root {
+      --brand-color: #ea2a33;
+    }
+    body {
+      font-family: 'Spline Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+<div class="flex flex-col h-screen">
+<header class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
+<div class="flex items-center gap-3">
+<svg class="h-8 w-8 text-[var(--brand-color)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 6.25278C12 6.25278 6.75278 3 3 3C3 3 3 11.2528 3 15.7528C3 20.2528 6.75278 21 12 21C17.2472 21 21 20.2528 21 15.7528C21 11.2528 21 3 21 3C17.2472 3 12 6.25278 12 6.25278Z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+<path d="M12 21V6.25278" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<h1 class="text-xl font-bold text-gray-900">
+<span class="font-normal text-gray-500">Repository:</span> facebook/react
+        </h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+<button class="flex items-center justify-center size-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+<svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+<div class="size-10 rounded-full bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAaK4Zqb5XehE3R3EPa-WFkg5fbj7axcVSKRwZ1HT1-n7JOBrZLKCui65WVatdeunU2KOTpwExrc5CCHs4nurH1-eEu2_pjhhUObtCxsyBCywdCMBQdBO8rBBBl9RoxcwyACeooQoJj-fr98Dq3KonruMuQ4AeSO0mzC3qh-JrdCeFKqbIj1khslMD_1DWIbdmw6uRyAum4rp3Yrq5US9BdII0RSBMO4MphhOk3cuds6ld_DWWSY_bQKZ4b2GxM8O1wPlMLo7g9b3c");'></div>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto p-6 space-y-8">
+<div class="flex items-start gap-4">
+<div class="flex-shrink-0 size-10 rounded-full bg-[var(--brand-color)] flex items-center justify-center text-white font-bold text-xl">
+          R
+        </div>
+<div class="bg-white p-4 rounded-lg rounded-tl-none shadow-sm max-w-lg">
+<p class="font-bold text-gray-900 mb-1">RepoRover</p>
+<p class="text-gray-700">
+            Hello! I'm RepoRover, your AI assistant for understanding code repositories. How can I help you analyze the <span class="font-semibold">facebook/react</span> repository today?
+          </p>
+</div>
+</div>
+<div class="flex items-start gap-4 justify-end">
+<div class="bg-blue-500 text-white p-4 rounded-lg rounded-br-none shadow-sm max-w-lg">
+<p>
+            Can you explain the purpose of the `hooks` directory?
+          </p>
+</div>
+<div class="flex-shrink-0 size-10 rounded-full bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAaK4Zqb5XehE3R3EPa-WFkg5fbj7axcVSKRwZ1HT1-n7JOBrZLKCui65WVatdeunU2KOTpwExrc5CCHs4nurH1-eEu2_pjhhUObtCxsyBCywdCMBQdBO8rBBBl9RoxcwyACeooQoJj-fr98Dq3KonruMuQ4AeSO0mzC3qh-JrdCeFKqbIj1khslMD_1DWIbdmw6uRyAum4rp3Yrq5US9BdII0RSBMO4MphhOk3cuds6ld_DWWSY_bQKZ4b2GxM8O1wPlMLo7g9b3c");'></div>
+</div>
+<div class="flex items-start gap-4">
+<div class="flex-shrink-0 size-10 rounded-full bg-[var(--brand-color)] flex items-center justify-center text-white font-bold text-xl">
+          R
+        </div>
+<div class="bg-white p-4 rounded-lg rounded-tl-none shadow-sm max-w-lg">
+<p class="font-bold text-gray-900 mb-1">RepoRover</p>
+<p class="text-gray-700">
+            Of course! The `hooks` directory in the React repository contains the implementation of React Hooks, such as `useState`, `useEffect`, `useContext`, and others. These are functions that let you “hook into” React state and lifecycle features from function components.
+          </p>
+</div>
+</div>
+</main>
+<footer class="bg-white border-t border-gray-200 p-4">
+<div class="max-w-4xl mx-auto">
+<div class="relative">
+<textarea class="w-full h-12 p-3 pr-28 border border-gray-300 rounded-full resize-none focus:ring-2 focus:ring-[var(--brand-color)] focus:border-transparent transition-shadow" placeholder="Ask a follow-up question about the repository..." rows="1"></textarea>
+<div class="absolute inset-y-0 right-3 flex items-center gap-2">
+<button class="p-2 text-gray-500 hover:text-gray-700">
+<svg class="w-6 h-6" fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+<path d="M209.66,122.34a8,8,0,0,1,0,11.32l-82.05,82a56,56,0,0,1-79.2-79.21L147.67,35.73a40,40,0,1,1,56.61,56.55L105,193A24,24,0,1,1,71,159L154.3,74.38A8,8,0,1,1,165.7,85.6L82.39,170.31a8,8,0,1,0,11.27,11.36L192.93,81A24,24,0,1,0,159,47L59.76,147.68a40,40,0,1,0,56.53,56.62l82.06-82A8,8,0,0,1,209.66,122.34Z"></path>
+</svg>
+</button>
+<button class="flex items-center justify-center h-10 w-10 rounded-full bg-[var(--brand-color)] text-white hover:bg-red-700 transition-colors">
+<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+</footer>
+</div>
+
+</body></html>

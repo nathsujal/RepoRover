@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RepoRover - Analyze GitHub Repositories</title>
+<link href="https://www.svgrepo.com/show/530491/search-alt.svg" rel="icon" type="image/svg+xml"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+    :root {
+       --primary-color: #ea2a33;
+     }
+     body {
+       font-family: "Spline Sans", sans-serif;
+     }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+<div class="flex flex-col items-center justify-center min-h-screen p-4 text-center">
+<header class="mb-10">
+<div class="flex items-center justify-center gap-3">
+<svg class="w-12 h-12 text-[var(--primary-color)]" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+<h1 class="text-5xl font-bold tracking-tight text-gray-900">RepoRover</h1>
+</div>
+</header>
+<main class="w-full max-w-2xl">
+<h2 class="text-2xl md:text-3xl font-semibold text-gray-800 mb-4">Unlock the secrets of your code.</h2>
+<p class="text-lg text-gray-600 mb-8">Paste a GitHub repository URL to get a deep analysis of code quality, dependencies, and potential vulnerabilities.</p>
+<form class="flex flex-col sm:flex-row items-center gap-4 w-full">
+<label class="sr-only" for="repo-url">GitHub Repository URL</label>
+<input class="form-input flex-grow w-full px-4 py-3 text-base text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent transition-shadow" id="repo-url" name="repo-url" placeholder="https://github.com/user/repository" required="" type="url"/>
+<button class="flex items-center justify-center w-full sm:w-auto px-6 py-3 bg-[var(--primary-color)] text-white text-base font-semibold rounded-lg shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors" type="submit">
+<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
+Analyze
+</button>
+</form>
+<p class="text-sm text-gray-500 mt-4">Enter a public repository URL to begin.</p>
+</main>
+<footer class="mt-16 text-center">
+<p class="text-gray-500"> 2024 RepoRover. All rights reserved.</p>
+</footer>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('form');
+    
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const repoUrl = document.getElementById('repo-url').value.trim();
+        
+        if (!repoUrl) {
+            alert('Please enter a GitHub repository URL');
+            return;
+        }
+        
+        const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        if (!match) {
+            alert('Please enter a valid GitHub repository URL');
+            return;
+        }
+        
+        const [_, owner, repo] = match;
+        window.location.href = `processing.html?owner=${encodeURIComponent(owner)}&repo=${encodeURIComponent(repo)}`;
+    });
+});
+</script>
+
+</body></html>
