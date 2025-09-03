@@ -303,3 +303,39 @@ class GetAllEntities(BaseTool):
             logger.error(f"Error in get_all_entities: {e}")
             return {"status": "error", "error": str(e)}
 
+# ==============================================================================
+# Tool 8: Get Entity Code (Entity Store)
+# ==============================================================================
+
+class GetEntitycode(BaseTool):
+    """
+    Retrieves the source code of a specific entity given its unique ID.
+    """
+    name: str = "get_entity_code"
+    description: str = "Retrieves the source code of a specific entity given its unique ID."
+    args_schema: type[BaseModel] = GetEntityByIdInput
+
+    def __init__(self, semantic_memory, **kwargs):
+        super().__init__(**kwargs)
+        object.__setattr__(self, '_semantic_memory', semantic_memory)
+
+    @property
+    def semantic_memory(self):
+        return self._semantic_memory
+
+    def _run(self, entity_id: str) -> Dict[str, Any]:
+        """Synchronous execution wrapper."""
+        return asyncio.run(self._arun(entity_id))
+
+    async def _arun(self, entity_id: str) -> Dict[str, Any]:
+        """Async implementation of the tool."""
+        try:
+            logger.info(f"Looking up code for entity: '{entity_id}'.")
+            entity = self.semantic_memory.entity_store.get_entity(entity_id)
+            if entity:
+                return {"status": "success", "code": entity.code}
+            else:
+                return {"status": "error", "error": "Entity not found."}
+        except Exception as e:
+            logger.error(f"Error in get_entity_code: {e}")
+            return {"status": "error", "error": str(e)}

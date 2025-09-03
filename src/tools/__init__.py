@@ -6,6 +6,7 @@ from .semantic_memory_tools import (
     GetEntityById,
     GetEntitiesByType,
     GetAllEntities,
+    GetEntitycode,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "GetEntityById",
     "GetEntitiesByType",
     "GetAllEntities",
+    "GetEntityCode",
 ]
