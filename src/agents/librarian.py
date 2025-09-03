@@ -111,7 +111,7 @@ async def run_librarian_agent(
     # --- 2. Generate Embeddings in a Batch ---
     try:
         logger.info(f"Generating embeddings for {len(all_chunks)} text chunks...")
-        embedding_function = semantic_memory.vector_store.embedding_function
+        embedding_function = semantic_memory.vector_store._embedding_function
         
         if not embedding_function:
             logger.error("No embedding function available in vector store")

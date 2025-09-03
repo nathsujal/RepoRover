@@ -63,19 +63,23 @@ Based *only* on the Background Information provided, answer the user's question 
     async def execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Synthesizes a response from a query plan."""
         question = input_data.get("question")
-        plan = input_data.get("plan")
+        plan_results = input_data.get("plan")
+
+        logger.info(f"Question: {question}")
+        logger.info(f"Plan Results: {plan_results}")
 
         conversation_history = input_data.get("conversation_history", "No history available.")
         persona = input_data.get("persona")
 
-        if not question or not plan:
-            return {"status": "error", "message": "Question and plan are required."}
+        if not question or plan_results is None:
+            return {"status": "error", "message": "Question and plan results are required."}
 
         logger.info(f"Synthesizing response for question: {question}")
-        prompt = self._create_synthesis_prompt(question, plan, conversation_history, persona)
+        prompt = self._create_synthesis_prompt(question, plan_results, conversation_history, persona)
         
         try:
             response = self.model.generate(prompt)
+            logger.info(f"Synthesized response: {response}")
             return {"status": "success", "response": response}
         except Exception as e:
             logger.exception("Error during response synthesis.")

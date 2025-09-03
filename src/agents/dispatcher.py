@@ -2,6 +2,7 @@
 Dispatcher Agent: Manages the ingestion workflow for a repository.
 """
 import logging
+import json
 from typing import Any, Dict, Type
 from pathlib import Path
 import os
@@ -11,7 +12,6 @@ from pydantic import BaseModel
 from .architect import ArchitectAgent
 from .librarian import LibrarianAgent
 from .annotator import AnnotatorAgent
-from .query_planner import QueryPlannerAgent
 from .information_retriever import InformationRetrieverAgent
 from .synthesizer import SynthesizerAgent
 
@@ -62,7 +62,6 @@ class DispatcherAgent():
             "architect": ArchitectAgent(self.semantic_memory, self.core_memory, self.episodic_memory),
             "librarian": LibrarianAgent(self.semantic_memory, self.core_memory, self.episodic_memory),
             "annotator": AnnotatorAgent(self.semantic_memory, self.core_memory, self.episodic_memory),
-            "query_planner": QueryPlannerAgent(self.semantic_memory),
             "information_retriever": InformationRetrieverAgent(self.semantic_memory),
             "synthesizer": SynthesizerAgent(),
         }
@@ -191,6 +190,12 @@ class DispatcherAgent():
                             step_input[key] = None
                     else:
                         step_input[key] = value
+
+            if step.agent == "information_retriever":
+                step_input['question'] = context.get('question')
+                # Pass the planner's analysis for context, if available
+                if 'planned_query' in context:
+                    step_input['plan_analysis'] = context['planned_query'].get('analysis')
             
             logger.info(f"Executing step '{step.name}' with agent '{step.agent}'.")
             
@@ -199,7 +204,15 @@ class DispatcherAgent():
 
             # Update context with the result of the step
             if step.output:
-                context[step.output] = result
+                # Special handling for the retriever's output to pass to the synthesizer
+                if step.agent == "information_retriever" and result.get("status") == "success":
+                    context[step.output] = {
+                        "collected_data": result.get("collected_data", [])
+                    }
+                else:
+                    context[step.output] = result
+            
+            logger.info(f"\nContext: {context}\n")
 
         return context
 

@@ -3,19 +3,10 @@
     "description": "A workflow to handle user questions about a repository.",
     "steps": [
         {
-            "name": "query_planner_step",
-            "agent": "query_planner",
-            "input": {
-                "question": "{{question}}"
-            },
-            "output": "planned_query",
-            "description": "Generate a plan to answer the user's question."
-        },
-        {
             "name": "information_retriever_step",
             "agent": "information_retriever",
             "input": {
-                "plan": "{{planned_query.plan}}"
+                "question": "{{question}}"
             },
             "output": "retrieved_data",
             "description": "Execute the plan and gather information from memory."
