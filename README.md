@@ -5,7 +5,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.68.0-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com/)
 
 <p align="center">
-  <img src="static/logo.svg" width="150" alt="RepoRover Logo">
+  <img src="static/logo.svg" width="0" alt="RepoRover Logo">
 </p>
 
 RepoRover is an AI-powered codebase companion that helps you analyze and understand GitHub repositories. It provides deep insights into code quality, dependencies, and potential vulnerabilities through an intuitive chat interface.
