@@ -35,7 +35,7 @@ wheels/
 
 # Local development
 .DS_Store
-Thumbs.db
+Thumbs.db``
 
 # Logs and databases
 *.log
@@ -49,3 +49,7 @@ data/
 # Tests
 tests/
 test*.py
+
+.github/
+.pytest_cache/
+docs/
