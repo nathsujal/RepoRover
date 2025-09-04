@@ -40,7 +40,7 @@ class SQLiteEntityStore:
                 (entity.unique_id, entity.type, entity.summary, entity.details, entity.code, entity.source)
             )
 
-    def get_entity(self, unique_id: str) -> List[Entity] | None:
+    def get_entity(self, unique_id: str) -> Entity | None:
         self.cursor.execute("SELECT * FROM entities WHERE unique_id=?", (unique_id,))
         row = self.cursor.fetchone()
         if row:
