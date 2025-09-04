@@ -58,6 +58,19 @@ async def run_ingestion(task_id: str, github_url: str):
         ingestion_status[task_id] = {"status": "error", "message": str(e)}
 
 
+# --- Helper function to serve HTML files ---
+async def serve_html_file(filename: str):
+    """Helper function to serve HTML files with proper error handling."""
+    try:
+        with open(filename, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError:
+        return JSONResponse(
+            content={"detail": f"{filename} not found. Make sure it's in the same directory as main.py."},
+            status_code=404
+        )
+
+
 # --- API Endpoints ---
 @app.post("/ingest")
 async def ingest_repository(request: IngestRequest, background_tasks: BackgroundTasks):
@@ -107,17 +120,21 @@ async def query_repository(request: QueryRequest):
             status_code=500
         )
 
-# --- Serving the Frontend ---
+# --- Serving the Frontend HTML Pages ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    try:
-        with open("frontend/index.html", "r") as f:
-            return HTMLResponse(content=f.read())
-    except FileNotFoundError:
-        return JSONResponse(
-            content={"detail": "index.html not found. Make sure it's in the same directory as main.py."},
-            status_code=404
-        )
+    """Serve the main index page."""
+    return await serve_html_file("index.html")
+
+@app.get("/processing.html", response_class=HTMLResponse)
+async def read_processing():
+    """Serve the processing page."""
+    return await serve_html_file("processing.html")
+
+@app.get("/chat.html", response_class=HTMLResponse)
+async def read_chat():
+    """Serve the chat page."""
+    return await serve_html_file("chat.html")
 
 # --- Main Entry Point ---
 if __name__ == "__main__":

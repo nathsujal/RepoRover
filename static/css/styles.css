@@ -45,8 +45,6 @@ body {
 /* Custom Focus Styles */
 .form-input:focus {
     outline: none;
-    ring: 2px;
-    ring-color: var(--primary-color);
     border-color: transparent;
     transition: box-shadow 0.2s;
 }

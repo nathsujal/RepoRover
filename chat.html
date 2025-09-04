@@ -20,6 +20,16 @@
               <span class="font-normal text-gray-500">Repository:</span> <span id="chat-repo-name"></span>
             </h1>
           </div>
+          <div class="flex items-center gap-4">
+            <div class="relative">
+              <button class="flex items-center justify-center size-10 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors" onclick="window.location.href='index.html'">
+                <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                </svg>
+              </button>
+            </div>
+            <div class="size-10 rounded-full bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAaK4Zqb5XehE3R3EPa-WFkg5fbj7axcVSKRwZ1HT1-n7JOBrZLKCui65WVatdeunU2KOTpwExrc5CCHs4nurH1-eEu2_pjhhUObtCxsyBCywdCMBQdBO8rBBBl9RoxcwyACeooQoJj-fr98Dq3KonruMuQ4AeSO0mzC3qh-JrdCeFKqbIj1khslMD_1DWIbdmw6uRyAum4rp3Yrq5US9BdII0RSBMO4MphhOk3cuds6ld_DWWSY_bQKZ4b2GxM8O1wPlMLo7g9b3c");'></div>
+          </div>
         </header>
 
         <main id="chat-messages" class="flex-1 overflow-y-auto p-6 space-y-8">
@@ -38,37 +48,26 @@
 
         <footer class="bg-white border-t border-gray-200 p-4">
             <div class="max-w-4xl mx-auto">
-                <form id="chat-form" class="flex items-center gap-3">
-                    <div class="flex-1 relative">
-                        <textarea id="chat-input" 
-                                  class="w-full min-h-12 max-h-32 p-3 pr-4 border border-gray-300 rounded-2xl resize-none focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent transition-all duration-200 leading-relaxed scrollbar-none overflow-hidden" 
-                                  placeholder="Ask a follow-up question about the repository..." 
-                                  rows="1"
-                                  style="field-sizing: content;"></textarea>
+                <form id="chat-form" class="relative">
+                    <textarea id="chat-input" 
+                              class="w-full h-12 p-3 pr-28 border border-gray-300 rounded-full resize-none focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent transition-shadow" 
+                              placeholder="Ask a follow-up question about the repository..." 
+                              rows="1"></textarea>
+                    <div class="absolute inset-y-0 right-3 flex items-center gap-2">
+                        <button type="button" class="p-2 text-gray-500 hover:text-gray-700">
+                            <svg class="w-6 h-6" fill="currentColor" height="24" viewBox="0 0 256 256" width="24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M209.66,122.34a8,8,0,0,1,0,11.32l-82.05,82a56,56,0,0,1-79.2-79.21L147.67,35.73a40,40,0,1,1,56.61,56.55L105,193A24,24,0,1,1,71,159L154.3,74.38A8,8,0,1,1,165.7,85.6L82.39,170.31a8,8,0,1,0,11.27,11.36L192.93,81A24,24,0,1,0,159,47L59.76,147.68a40,40,0,1,0,56.53,56.62l82.06-82A8,8,0,0,1,209.66,122.34Z"></path>
+                            </svg>
+                        </button>
+                        <button type="submit" 
+                                id="send-btn"
+                                class="flex items-center justify-center h-10 w-10 rounded-full bg-[var(--primary-color)] text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                            </svg>
+                        </button>
                     </div>
-                    
-                    <!-- Send button -->
-                    <button type="submit" 
-                            id="send-btn"
-                            class="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-[var(--primary-color)] text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary-color)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
-                            disabled>
-                        <svg class="w-5 h-5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-                        </svg>
-                    </button>
                 </form>
-                
-                <!-- Typing indicator -->
-                <div id="typing-status" class="mt-2 px-1 opacity-0 transition-opacity duration-300">
-                    <div class="flex items-center gap-2 text-sm text-gray-500">
-                        <div class="flex items-center gap-1">
-                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms;"></div>
-                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms;"></div>
-                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms;"></div>
-                        </div>
-                        <span>RepoRover is thinking...</span>
-                    </div>
-                </div>
             </div>
         </footer>
     </div>

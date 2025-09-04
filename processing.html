@@ -14,11 +14,25 @@
 <body class="bg-gray-50 text-gray-900">
     <div class="relative flex size-full min-h-screen flex-col group/design-root overflow-x-hidden">
         <div class="layout-container flex h-full grow flex-col">
-            <header class="flex items-center justify-center whitespace-nowrap border-b border-solid border-gray-200 px-10 py-3">
-                <div class="flex items-center gap-4 text-gray-900">
-                    <img src="static/logo.svg" alt="RepoRover Logo" class="w-8 h-8">
-                    <h2 class="text-gray-900 text-lg font-bold leading-tight tracking-[-0.015em]">RepoRover</h2>
-                </div>
+            <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-gray-200 px-10 py-3">
+              <div class="flex items-center gap-4 text-gray-900">
+                <img src="static/logo.svg" alt="RepoRover Logo" class="w-8 h-8">
+                <h2 class="text-gray-900 text-lg font-bold leading-tight tracking-[-0.015em]">RepoRover</h2>
+              </div>
+              <div class="flex flex-1 justify-end gap-4">
+                <nav class="flex items-center gap-6">
+                    <a class="text-gray-900 text-sm font-medium leading-normal hover:text-[var(--primary-color)] transition-colors" href="index.html">Home</a>
+                    <a class="text-gray-900 text-sm font-medium leading-normal hover:text-[var(--primary-color)] transition-colors" href="#">Explore</a>
+                    <a class="text-gray-900 text-sm font-medium leading-normal hover:text-[var(--primary-color)] transition-colors" href="#">Pricing</a>
+                </nav>
+                <div class="flex items-center gap-4">
+                  <button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-6 bg-[var(--primary-color)] text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-red-700 transition-colors" onclick="window.location.href='index.html'">
+                      <span class="truncate">New Analysis</span>
+                  </button>
+                  <div class="relative">
+                    <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuADOie7PO-YL3ctotTK4WQarcxUKOEnkQ_wvbcbBCJK5LOwJR3HLPm8NTEWYoLaMM-dcq0hiiLyPDC1uRAGO3AgHwdpIIsgMKq1MEeHScE74FSr-p8ikREi7o_cxynRGONx9eZKwJ0O2-VzHvL6ey0lRg3A1V7m006BjpIahNPtuLF-cSfUI1VjTGzVOdQ_vsRju56NQ0x-pxDN_AxN6qWKI4idbB12UVGul9El-lvNQMZCSqtfsSZVixiWtF5rMIOR6SVETj28yFo");'></div>
+                  </div>
+              </div>
             </header>
 
             <main class="flex flex-1 justify-center py-16 px-4">
