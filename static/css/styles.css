@@ -1,84 +1,166 @@
-/* Enhanced Chat Input Styles */
-#chat-input {
-    /* Hide scrollbar completely */
-    -ms-overflow-style: none;  /* Internet Explorer 10+ */
-    scrollbar-width: none;  /* Firefox */
+/* CSS Custom Properties */
+:root {
+    --primary-color: #ea2a33;
 }
 
-#chat-input::-webkit-scrollbar { 
-    display: none;  /* Safari and Chrome */
+/* Base Styles */
+body {
+    font-family: "Spline Sans", sans-serif;
 }
 
-/* Auto-resize behavior */
-#chat-input {
-    overflow-y: hidden;
-    line-height: 1.5;
-    font-size: 14px;
+/* Utility Classes */
+.hidden { 
+    display: none !important; 
 }
 
-#chat-input:focus {
-  outline: none;
-  box-shadow: none;
-  border-color: #d1d5db; /* same as border-gray-300 */
+.fade-in { 
+    animation: fadeIn 0.5s ease-in;
 }
 
-/* Send button states */
-#send-btn:disabled {
-    background-color: #d1d5db;
+.spin { 
+    animation: spin 1s linear infinite; 
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes spin {
+    from { 
+        transform: rotate(0deg); 
+    }
+    to { 
+        transform: rotate(360deg); 
+    }
+}
+
+/* Custom Focus Styles */
+.form-input:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: var(--primary-color);
+    border-color: transparent;
+    transition: box-shadow 0.2s;
+}
+
+/* Button Hover States */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #c71f26;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
 }
 
-#send-btn:disabled:hover {
-    background-color: #d1d5db;
-    transform: none;
+/* Chat Message Styles */
+.message-user {
+    background-color: #3b82f6;
+    color: white;
+    border-radius: 0.5rem;
+    border-bottom-right-radius: 0;
 }
 
-/* Keyboard shortcut indicators */
-kbd {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
-    font-family: inherit;
+.message-agent {
+    background-color: white;
+    border-radius: 0.5rem;
+    border-top-left-radius: 0;
 }
 
-/* Smooth animations for textarea resize */
-#chat-input {
-    transition: height 0.1s ease-out;
+/* Loading Animation */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
-/* Character counter styling */
-#char-counter {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(4px);
-    border-radius: 4px;
-    padding: 2px 4px;
+.typing-dot {
+    width: 0.5rem;
+    height: 0.5rem;
+    background-color: #6b7280;
+    border-radius: 50%;
+    animation: pulse 1.4s ease-in-out infinite both;
 }
 
-/* Typing indicator animation */
-#typing-status {
-    opacity: 0;
-    transition: opacity 0.3s ease;
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
 }
 
-#typing-status.show {
-    opacity: 1;
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
 }
 
-/* Mobile responsive improvements */
+@keyframes pulse {
+    0%, 80%, 100% {
+        opacity: 0.5;
+    }
+    40% {
+        opacity: 1;
+    }
+}
+
+/* Responsive Design Improvements */
 @media (max-width: 640px) {
-    #chat-form {
-        gap: 2px;
+    .flex-col.sm\:flex-row {
+        flex-direction: column;
     }
     
-    #send-btn {
-        width: 44px;
-        height: 44px;
+    .w-full.sm\:w-auto {
+        width: 100%;
     }
-    
-    #chat-input {
-        font-size: 16px; /* Prevent zoom on iOS */
-    }
-    
-    .helper-text {
-        display: none; /* Hide helper text on mobile */
-    }
+}
+
+/* Custom Scrollbar */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Log Container Specific Styles */
+#log-container {
+    font-family: 'Courier New', monospace;
+}
+
+/* Status Indicator Colors */
+.status-completed {
+    color: #10b981;
+}
+
+.status-progress {
+    color: var(--primary-color);
+}
+
+.status-error {
+    color: #ef4444;
+}
+
+.status-pending {
+    color: #6b7280;
 }

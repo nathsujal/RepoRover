@@ -1,201 +1,165 @@
-// Utility Functions - Optional shared utilities
+// Chat Interface JavaScript
 
-// API Helper Functions
-class ApiClient {
-    static async post(url, data) {
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data),
-            });
-            
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || `HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            return await response.json();
-        } catch (error) {
-            console.error(`API Error (${url}):`, error);
-            throw error;
-        }
+// Initialize chat page
+document.addEventListener('DOMContentLoaded', () => {
+    const currentRepo = sessionStorage.getItem('currentRepo');
+    
+    if (!currentRepo) {
+        // Redirect to home if no repo data
+        window.location.href = 'index.html';
+        return;
     }
     
-    static async get(url) {
-        try {
-            const response = await fetch(url);
-            
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.detail || `HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            return await response.json();
-        } catch (error) {
-            console.error(`API Error (${url}):`, error);
-            throw error;
-        }
-    }
-}
+    // Set repository name in header
+    document.getElementById('chat-repo-name').textContent = currentRepo;
+    
+    // Update welcome message
+    document.getElementById('welcome-message').textContent = 
+        `Hello! I'm RepoRover. I've finished analyzing the ${currentRepo} repository. How can I help you?`;
+    
+    // Auto-resize textarea functionality
+    setupTextareaResize();
+});
 
-// Session Storage Helpers
-class SessionManager {
-    static set(key, value) {
-        try {
-            sessionStorage.setItem(key, JSON.stringify(value));
-        } catch (error) {
-            console.warn('Failed to save to sessionStorage:', error);
-        }
-    }
+// Chat form submission
+document.getElementById('chat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
     
-    static get(key) {
-        try {
-            const value = sessionStorage.getItem(key);
-            return value ? JSON.parse(value) : null;
-        } catch (error) {
-            console.warn('Failed to read from sessionStorage:', error);
-            return null;
-        }
-    }
+    const input = document.getElementById('chat-input');
+    const question = input.value.trim();
+    if (!question) return;
     
-    static remove(key) {
-        try {
-            sessionStorage.removeItem(key);
-        } catch (error) {
-            console.warn('Failed to remove from sessionStorage:', error);
-        }
-    }
+    // Add user message
+    addMessage(question, 'user');
+    input.value = '';
+    resetTextareaHeight();
     
-    static clear() {
-        try {
-            sessionStorage.clear();
-        } catch (error) {
-            console.warn('Failed to clear sessionStorage:', error);
-        }
-    }
-}
-
-// URL Validation
-class UrlValidator {
-    static isValidGitHubUrl(url) {
-        try {
-            const urlObj = new URL(url);
-            return urlObj.hostname === 'github.com' && 
-                   urlObj.pathname.split('/').length >= 3 &&
-                   urlObj.pathname !== '/';
-        } catch (error) {
-            return false;
-        }
-    }
+    // Show typing indicator
+    const typingId = addMessage('', 'agent', true);
     
-    static extractRepoName(url) {
-        try {
-            const urlObj = new URL(url);
-            const pathParts = urlObj.pathname.split('/').filter(part => part);
-            if (pathParts.length >= 2) {
-                return `${pathParts[0]}/${pathParts[1]}`;
-            }
-            return null;
-        } catch (error) {
-            return null;
-        }
-    }
-}
-
-// UI Helpers
-class UIHelpers {
-    static showToast(message, type = 'info', duration = 3000) {
-        // Create toast element
-        const toast = document.createElement('div');
-        toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-0`;
-        
-        // Set colors based on type
-        const colors = {
-            info: 'bg-blue-500 text-white',
-            success: 'bg-green-500 text-white',
-            warning: 'bg-yellow-500 text-white',
-            error: 'bg-red-500 text-white'
-        };
-        
-        toast.className += ` ${colors[type] || colors.info}`;
-        toast.textContent = message;
-        
-        // Add to DOM
-        document.body.appendChild(toast);
-        
-        // Animate in
-        setTimeout(() => {
-            toast.style.transform = 'translateX(0)';
-        }, 10);
-        
-        // Remove after duration
-        setTimeout(() => {
-            toast.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
-                }
-            }, 300);
-        }, duration);
-    }
-    
-    static showLoader(element, text = 'Loading...') {
-        const loader = document.createElement('div');
-        loader.className = 'flex items-center justify-center p-4';
-        loader.innerHTML = `
-            <svg class="spin h-5 w-5 mr-3" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" fill="currentColor"></path>
-            </svg>
-            ${text}
-        `;
-        
-        element.innerHTML = '';
-        element.appendChild(loader);
-        
-        return loader;
-    }
-    
-    static formatTimestamp(date = new Date()) {
-        return date.toLocaleTimeString('en-US', {
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
+    try {
+        const response = await fetch('/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ question: question }),
         });
-    }
-}
-
-// Error Handling
-class ErrorHandler {
-    static handle(error, context = '') {
-        console.error(`Error${context ? ` in ${context}` : ''}:`, error);
         
-        let userMessage = 'An unexpected error occurred.';
-        
-        if (error.message) {
-            if (error.message.includes('network') || error.message.includes('fetch')) {
-                userMessage = 'Network error. Please check your connection and try again.';
-            } else if (error.message.includes('timeout')) {
-                userMessage = 'Request timed out. Please try again.';
-            } else {
-                userMessage = error.message;
-            }
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Failed to get response');
         }
         
-        UIHelpers.showToast(userMessage, 'error', 5000);
-        return userMessage;
+        const result = await response.json();
+        const answer = result.result?.final_response?.response || result.message || 'Sorry, I could not find an answer.';
+        
+        // Remove typing indicator and add actual response
+        document.getElementById(typingId).remove();
+        addMessage(answer, 'agent');
+        
+    } catch (error) {
+        // Remove typing indicator and show error
+        document.getElementById(typingId).remove();
+        addMessage('Sorry, I encountered an error: ' + error.message, 'agent');
     }
+});
+
+function addMessage(text, role, isTyping = false) {
+    const messagesContainer = document.getElementById('chat-messages');
+    const messageDiv = document.createElement('div');
+    const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    messageDiv.id = messageId;
+    messageDiv.className = `flex items-start gap-4 ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+    
+    if (role === 'user') {
+        messageDiv.innerHTML = `
+            <div class="bg-blue-500 text-white p-4 rounded-lg rounded-br-none shadow-sm max-w-lg">
+                <p>${escapeHtml(text)}</p>
+            </div>
+            <div class="flex-shrink-0 size-10 rounded-full bg-cover bg-center" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAaK4Zqb5XehE3R3EPa-WFkg5fbj7axcVSKRwZ1HT1-n7JOBrZLKCui65WVatdeunU2KOTpwExrc5CCHs4nurH1-eEu2_pjhhUObtCxsyBCywdCMBQdBO8rBBBl9RoxcwyACeooQoJj-fr98Dq3KonruMuQ4AeSO0mzC3qh-JrdCeFKqbIj1khslMD_1DWIbdmw6uRyAum4rp3Yrq5US9BdII0RSBMO4MphhOk3cuds6ld_DWWSY_bQKZ4b2GxM8O1wPlMLo7g9b3c");'></div>
+        `;
+    } else {
+        const content = isTyping ? 
+            '<div class="flex items-center space-x-1"><div class="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div><div class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay: 0.2s"></div><div class="w-2 h-2 bg-gray-500 rounded-full animate-pulse" style="animation-delay: 0.4s"></div></div>' :
+            `<p class="font-bold text-gray-900 mb-1">RepoRover</p><div class="text-gray-700">${formatMessage(text)}</div>`;
+        
+        messageDiv.innerHTML = `
+            <div class="flex-shrink-0 size-10 rounded-full bg-[var(--primary-color)] flex items-center justify-center text-white font-bold text-xl">
+                R
+            </div>
+            <div class="bg-white p-4 rounded-lg rounded-tl-none shadow-sm max-w-lg">
+                ${content}
+            </div>
+        `;
+    }
+    
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+    
+    return messageId;
 }
 
-// Export for use in other scripts (if using modules)
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        ApiClient,
-        SessionManager,
-        UrlValidator,
-        UIHelpers,
-        ErrorHandler
-    };
+function setupTextareaResize() {
+    const textarea = document.getElementById('chat-input');
+    
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
+    
+    // Handle Enter key for submission (Shift+Enter for new line)
+    textarea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+        }
+    });
+}
+
+function resetTextareaHeight() {
+    const textarea = document.getElementById('chat-input');
+    textarea.style.height = '3rem'; // Reset to initial height (h-12)
+}
+
+function scrollToBottom() {
+    const messagesContainer = document.getElementById('chat-messages');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatMessage(text) {
+    // Basic formatting for better readability
+    if (!text) return '';
+    
+    // Convert line breaks to HTML
+    text = escapeHtml(text);
+    
+    // Convert double line breaks to paragraphs
+    text = text.replace(/\n\n/g, '</p><p>');
+    
+    // Convert single line breaks to <br>
+    text = text.replace(/\n/g, '<br>');
+    
+    // Wrap in paragraph tags if not already wrapped
+    if (!text.startsWith('<p>')) {
+        text = '<p>' + text + '</p>';
+    }
+    
+    // Handle markdown-style code blocks (basic support)
+    text = text.replace(/```([\s\S]*?)```/g, '<pre class="bg-gray-100 p-2 rounded mt-2 mb-2 overflow-x-auto"><code>$1</code></pre>');
+    
+    // Handle inline code
+    text = text.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 rounded">$1</code>');
+    
+    // Handle bold text
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Handle italic text
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    
+    return text;
 }
