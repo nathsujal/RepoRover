@@ -8,16 +8,16 @@
   <img src="static/logo.svg" width="150" alt="RepoRover Logo">
 </p>
 
-RepoRover is an AI-powered codebase companion that helps you analyze and understand GitHub repositories. It provides deep insights into code quality, dependencies, and potential vulnerabilities through an intuitive chat interface.
+RepoRover is a technical multi-agent AI system designed to explore and analyze Python repositories on GitHub. It brings together specialized AI agents connected through a structured memory system, enabling them to share insights about code, libraries, commit history, and tooling in a coordinated way.
 
-## 🚀 Features
+The project was inspired by a personal goal: to better understand Python projects and open-source tools on GitHub, while gaining hands-on experience with multi-agent architectures and memory systems.
 
-- **Repository Analysis**: Get comprehensive insights about any public GitHub repository
-- **Interactive Chat**: Ask questions about the codebase in natural language
-- **Code Understanding**: AI-powered code explanation and documentation
-- **Dependency Analysis**: Identify and analyze project dependencies
-- **Real-time Processing**: Monitor repository ingestion progress in real-time
-- **Modern Web Interface**: Clean, responsive UI built with Tailwind CSS
+
+- **🤖 Multi-Agent Collaboration**: distinct AI agents with specialized roles.
+- **🧠 Structured Memory System**: modular memory components for code metadata, commit history, and user preferences.
+- **🔗 Agent Communication**: coordination between agents through shared memory.
+- **📂 Repository Insights**: automated exploration of project structures, libraries, and tools.
+- **🔍 Research-Inspired Design**: influenced by state-of-the-art papers in agentic AI and modular memory.
 
 ## 🛠️ Installation
 
@@ -49,7 +49,7 @@ RepoRover is an AI-powered codebase companion that helps you analyze and underst
 
 1. Start the FastAPI server:
    ```bash
-   uvicorn main:app --reload
+   python main.py
    ```
 
 2. Open your browser and navigate to:
@@ -94,6 +94,16 @@ RepoRover/
    - Uses AI to understand natural language questions
    - Searches through the codebase for relevant information
    - Generates human-like responses based on the analysis
+
+## 📖 Research Inspiration
+
+RepoRover’s architecture was shaped by cutting-edge research:
+<a id="1">[1]</a> “Small Language Models are the Future of Agentic AI” [Belcak et al., 2025](https://arxiv.org/abs/2506.02153)
+<a id="2">[2]</a> “MIRIX: A Modular Multi-Agent Memory System for Enhanced Long-Term Reasoning and Personalization in LLM-Based Agents” [2025](https://arxiv.org/abs/2507.07957)
+
+RepoRover applies these ideas by:
+- Using compact, task-specific models for agents.
+- Implementing a modular memory framework inspired by MIRIX’s multi-memory design.
 
 ## 🛡️ License
 

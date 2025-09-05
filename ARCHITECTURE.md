@@ -88,13 +88,8 @@ graph TD
 - User submits a natural language question about the codebase
 
 ### Process Flow
-1. **Query Understanding**
-   - Analyzes the user's question
-   - Identifies key concepts and intents
-   - Determines relevant parts of the codebase to examine
-
-2. **Context Retrieval**
-   - Searches the semantic memory for relevant code snippets
+1. **Context Retrieval**
+   - Using various tools it does the appropriate search
    - Retrieves related documentation and examples
    - Gathers contextual information about the code
 
@@ -123,16 +118,10 @@ graph TD
 
 ## 🔄 Data Flow
 
-1. **Ingestion Path**
-   - GitHub Repo → FastAPI → Background Task → AI Processing → Semantic Memory
-
-2. **Query Path**
-   - User Question → FastAPI → AI Model → Semantic Memory → Response Generation → User
-
 ```mermaid
 graph TD
     A[Start: User Question] --> B(Dispatcher Agent);
-    B -- Assembles Cognitive Context --> C[Query Planner Agent];
+    B -- Assembles Cognitive Context --> C[Infromation Retriever Agent];
     
     subgraph Cognitive Context
         D[Episodic Memory - History];
@@ -142,8 +131,7 @@ graph TD
     D --> B;
     E --> B;
     
-    C -- Creates Plan --> F[Information Retriever Agent];
-    F -- Executes Plan --> G((Semantic Memory));
-    G -- Returns Data --> H[Synthesizer Agent];
-    H -- Generates Response --> I[End: Final Answer];
+    C -- Retrieves Data -->  F((Semantic Memory));
+    F -- Returns Data --> G[Synthesizer Agent];
+    G -- Generates Response --> H[End: Final Answer];
 ```
